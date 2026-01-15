@@ -1,0 +1,63 @@
+.plot-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 600px;
+  height: 400px;
+  background-color: #161b22;
+  border: 2px solid #30363d;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.plot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #0d1117;
+  border-bottom: 1px solid #30363d;
+}
+
+.plot-header h3 {
+  margin: 0;
+  color: #58a6ff;
+  font-size: 14px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #c9d1d9;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #f85149;
+}
+
+.plot-content {
+  flex: 1;
+  overflow: auto;
+  background-color: #0d1117;
+}
+
+@media (max-width: 1024px) {
+  .plot-container {
+    width: 90vw;
+    height: 50vh;
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+  }
+}

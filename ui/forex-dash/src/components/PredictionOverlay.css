@@ -1,0 +1,215 @@
+/* PredictionOverlay Styling */
+
+.prediction-overlay {
+  position: absolute;
+  top: 120px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #1a472a;
+  border-radius: 4px;
+  padding: 16px;
+  max-width: 320px;
+  font-family: 'Courier New', monospace;
+  color: #00ff41;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.prediction-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prediction-section {
+  border-radius: 3px;
+  padding: 12px;
+  background: rgba(10, 14, 39, 0.6);
+  border-left: 4px solid #00ff41;
+  transition: all 0.3s ease;
+}
+
+.prediction-section.bullish {
+  border-left-color: #00ff41;
+  background: rgba(0, 255, 65, 0.05);
+}
+
+.prediction-section.bullish:hover {
+  background: rgba(0, 255, 65, 0.1);
+  box-shadow: inset 0 0 8px rgba(0, 255, 65, 0.1);
+}
+
+.prediction-section.bearish {
+  border-left-color: #ff3333;
+  background: rgba(255, 51, 51, 0.05);
+}
+
+.prediction-section.bearish:hover {
+  background: rgba(255, 51, 51, 0.1);
+  box-shadow: inset 0 0 8px rgba(255, 51, 51, 0.1);
+}
+
+.prediction-title {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #4ade80;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.prediction-percentage {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.prediction-section.bullish .prediction-percentage {
+  color: #00ff41;
+}
+
+.prediction-section.bearish .prediction-percentage {
+  color: #ff3333;
+}
+
+.prediction-details {
+  font-size: 11px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-label {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.detail-value {
+  color: #cbd5e1;
+  margin-left: 8px;
+}
+
+.detail-value.up {
+  color: #00ff41;
+}
+
+.detail-value.down {
+  color: #ff3333;
+}
+
+.detail-value.sideways {
+  color: #fbbf24;
+}
+
+/* Confidence Bar */
+.confidence-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.confidence-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  background: linear-gradient(90deg, rgba(0, 255, 65, 0.3), rgba(0, 255, 65, 0.8));
+}
+
+.confidence-fill.down {
+  background: linear-gradient(90deg, rgba(255, 51, 51, 0.3), rgba(255, 51, 51, 0.8));
+}
+
+.confidence-fill.up {
+  background: linear-gradient(90deg, rgba(0, 255, 65, 0.3), rgba(0, 255, 65, 0.8));
+}
+
+/* Loading State */
+.prediction-loading {
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 8px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Refresh Button */
+.prediction-refresh {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #00ff41;
+  background: transparent;
+  color: #00ff41;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prediction-refresh:hover {
+  background: rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+.prediction-refresh:active {
+  transform: scale(0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .prediction-overlay {
+    top: 100px;
+    right: 10px;
+    max-width: 280px;
+    padding: 12px;
+  }
+
+  .prediction-percentage {
+    font-size: 24px;
+  }
+
+  .prediction-title {
+    font-size: 11px;
+  }
+
+  .detail-row {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .prediction-overlay {
+    position: relative;
+    max-width: 100%;
+    margin: 12px;
+    top: auto;
+    right: auto;
+  }
+}

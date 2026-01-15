@@ -1,0 +1,53 @@
+{
+  "ticker": "AUDUSD=X",
+  "fold": 3,
+  "lookback": 200,
+  "horizon": 1,
+  "n_features": 28,
+  "features": [
+    "Open",
+    "Open_log",
+    "Open_log_return",
+    "High",
+    "High_log",
+    "High_log_return",
+    "Low",
+    "Low_log",
+    "Low_log_return",
+    "Close",
+    "Close_log",
+    "close_log_return_lag_1",
+    "close_log_return_lag_2",
+    "close_log_return_lag_3",
+    "close_log_return_lag_5",
+    "close_log_return_lag_10",
+    "close_log_return_lag_20",
+    "close_log_return_lag_60",
+    "close_log_return_lag_120",
+    "close_log_return_lag_200",
+    "close_log_return_mean_5",
+    "close_log_return_std_5",
+    "close_log_return_mean_10",
+    "close_log_return_std_10",
+    "close_log_return_mean_20",
+    "close_log_return_std_20",
+    "close_log_return_mean_60",
+    "close_log_return_std_60"
+  ],
+  "model_formats": [
+    "lightgbm_txt",
+    "onnx"
+  ],
+  "metrics": {
+    "mae": 0.005449493556440725,
+    "rmse": 0.009973387339369822,
+    "ic": 0.43708152799117217,
+    "dir_acc": 0.6681887366818874,
+    "sharpe": 6.269304973252166,
+    "max_dd": -0.05121805952479619,
+    "hit_rate": 0.665144596651446
+  },
+  "performance_status": "Exceptional",
+  "prediction_target": "Next-period FX log returns (H=1)",
+  "scaler": "StandardScaler"
+}

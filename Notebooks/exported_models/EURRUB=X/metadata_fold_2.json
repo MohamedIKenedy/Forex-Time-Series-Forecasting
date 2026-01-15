@@ -1,0 +1,53 @@
+{
+  "ticker": "EURRUB=X",
+  "fold": 2,
+  "lookback": 200,
+  "horizon": 1,
+  "n_features": 28,
+  "features": [
+    "Open",
+    "Open_log",
+    "Open_log_return",
+    "High",
+    "High_log",
+    "High_log_return",
+    "Low",
+    "Low_log",
+    "Low_log_return",
+    "Close",
+    "Close_log",
+    "close_log_return_lag_1",
+    "close_log_return_lag_2",
+    "close_log_return_lag_3",
+    "close_log_return_lag_5",
+    "close_log_return_lag_10",
+    "close_log_return_lag_20",
+    "close_log_return_lag_60",
+    "close_log_return_lag_120",
+    "close_log_return_lag_200",
+    "close_log_return_mean_5",
+    "close_log_return_std_5",
+    "close_log_return_mean_10",
+    "close_log_return_std_10",
+    "close_log_return_mean_20",
+    "close_log_return_std_20",
+    "close_log_return_mean_60",
+    "close_log_return_std_60"
+  ],
+  "model_formats": [
+    "lightgbm_txt",
+    "onnx"
+  ],
+  "metrics": {
+    "mae": 0.011060227525431551,
+    "rmse": 0.01367919137557014,
+    "ic": 0.3847624017967446,
+    "dir_acc": 0.5745814307458144,
+    "sharpe": 3.20577388800056,
+    "max_dd": -0.19676240077840035,
+    "hit_rate": 0.573820395738204
+  },
+  "performance_status": "Exceptional",
+  "prediction_target": "Next-period FX log returns (H=1)",
+  "scaler": "StandardScaler"
+}

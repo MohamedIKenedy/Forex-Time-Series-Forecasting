@@ -1,0 +1,138 @@
+name: Forex ML Pipeline CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r api/requirements.txt
+        pip install pytest pytest-cov black flake8
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Format check with black
+      run: black --check .
+
+    - name: Test with pytest
+      run: |
+        pytest --cov=./ --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  train:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r api/requirements.txt
+        pip install ray[tune] mlflow optuna
+
+    - name: Run model training
+      run: |
+        python -c "
+        # Import and run training script
+        exec(open('Notebooks/forex_forecasting_v1.ipynb').read())
+        "
+
+    - name: Upload model artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: models
+        path: |
+          models/
+          scalers/
+          feature_importance/
+          ensembles/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: train
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install mlflow azureml-sdk
+
+    - name: Deploy to Azure ML
+      run: |
+        # Register models in Azure ML
+        python scripts/deploy_to_azure.py
+      env:
+        AZURE_ML_WORKSPACE: ${{ secrets.AZURE_ML_WORKSPACE }}
+        AZURE_ML_SUBSCRIPTION: ${{ secrets.AZURE_ML_SUBSCRIPTION }}
+        AZURE_ML_RESOURCE_GROUP: ${{ secrets.AZURE_ML_RESOURCE_GROUP }}
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+    - name: Build and push API image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./api
+        push: true
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-api:latest
+
+    - name: Build and push ML training image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile.train
+        push: true
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-train:latest
