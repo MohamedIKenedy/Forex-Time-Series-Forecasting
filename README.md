@@ -79,7 +79,7 @@ This project implements a comprehensive MLOps pipeline for forecasting foreign e
 
 1. **Clone and setup:**
 ```bash
-git clone <repository-url>
+git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git
 cd forex-time-series-forecasting
 ```
 
