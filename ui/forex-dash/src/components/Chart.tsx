@@ -16,6 +16,37 @@ const TICKERS = [
   'EURRUB=X', 'RUBUSD=X'
 ];
 
+// Inference cache with daily expiration
+interface InferenceCache {
+  data: InferenceData;
+  timestamp: number;
+  date: string;
+}
+
+const inferenceCache = new Map<string, InferenceCache>();
+
+const getCachedInference = (ticker: string): InferenceData | null => {
+  const cached = inferenceCache.get(ticker);
+  if (!cached) return null;
+  
+  const today = new Date().toISOString().slice(0, 10);
+  if (cached.date === today) {
+    return cached.data;
+  }
+  
+  inferenceCache.delete(ticker);
+  return null;
+};
+
+const setCachedInference = (ticker: string, data: InferenceData): void => {
+  const today = new Date().toISOString().slice(0, 10);
+  inferenceCache.set(ticker, {
+    data,
+    timestamp: Date.now(),
+    date: today
+  });
+};
+
 export const Chart: React.FC<ChartProps> = ({ data, onTickerChange, onPeriodChange, currentPeriod = '1d' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; price: number; date: string; isPrediction?: boolean; inference?: InferenceData } | null>(null);
@@ -25,13 +56,21 @@ export const Chart: React.FC<ChartProps> = ({ data, onTickerChange, onPeriodChan
   const showPrediction = currentPeriod !== '1d';
 
   const PRICE_DECIMALS = 6;
-  const POINT_RADIUS = 2; // keep markers tiny so the line looks smooth
+  const POINT_RADIUS = 2; 
 
-  // Fetch prediction when ticker changes
   const fetchPrediction = useCallback(async () => {
     if (!data?.ticker) return;
+    
+    // Check cache first
+    const cached = getCachedInference(data.ticker);
+    if (cached) {
+      setPrediction(cached);
+      return;
+    }
+    
     try {
       const result = await getInference(data.ticker);
+      setCachedInference(data.ticker, result);
       setPrediction(result);
     } catch (error) {
       console.error('Failed to fetch prediction:', error);
@@ -55,11 +94,9 @@ export const Chart: React.FC<ChartProps> = ({ data, onTickerChange, onPeriodChan
       return;
     }
 
-    // Set canvas size
     const width = canvas.width;
     const height = canvas.height;
 
-    // Clear canvas
     ctx.fillStyle = '#0a0e27';
     ctx.fillRect(0, 0, width, height);
 
@@ -257,7 +294,7 @@ export const Chart: React.FC<ChartProps> = ({ data, onTickerChange, onPeriodChan
     ctx.font = 'bold 28px "Courier New", monospace';
     ctx.fillText(`${currentPrice.toFixed(PRICE_DECIMALS)}`, width - 20, 44);
 
-  }, [data, hoveredPoint, mousePos, prediction, currentPeriod]);
+  }, [data, data?.prices, data?.dates, data?.latest, data?.streaming, hoveredPoint, mousePos, prediction, currentPeriod, showPrediction]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -310,7 +347,6 @@ export const Chart: React.FC<ChartProps> = ({ data, onTickerChange, onPeriodChan
     let nearestIndex = -1;
     let minDistance = Infinity;
 
-    // Check if hovering over prediction point first
     if (showPrediction && prediction && data.prices.length > 1 && futureTs !== null) {
       const lastPrice = data.prices[data.prices.length - 1];
       const predictedPrice = lastPrice * Math.exp(prediction.predicted_log_return);

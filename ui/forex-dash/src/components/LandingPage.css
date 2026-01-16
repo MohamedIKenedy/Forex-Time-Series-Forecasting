@@ -67,8 +67,8 @@
 
 .ascii-art {
   color: #00ff41;
-  font-size: 6px;
-  line-height: 0.9;
+  font-size: 8px;
+  line-height: 1.2;
   margin-bottom: 10px;
   text-shadow: 0 0 10px #00ff41;
   overflow-x: auto;

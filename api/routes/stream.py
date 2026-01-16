@@ -2,113 +2,32 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from typing import Dict, Any
 import yfinance as yf
 from services.streaming_service import StreamingService
-from services.conn_management import ConnectionManager
-from services.kafka_bridge import KafkaWebSocketBridge
+from services.utils.stream_utils import (
+    update_cache_and_broadcast,
+    update_cache_only,
+    _topic_name,
+    _ws_mode,
+    _start_kafka_bridge,
+    _stop_kafka_bridge,
+    fetch_yfinance_data,
+    latest_data_cache,
+    manager,
+    set_ws_broadcast_loop
+)
 import threading
 import asyncio
 import pandas as pd
 import os
 
 router = APIRouter()
-manager = ConnectionManager()
 
 streaming_service_instance: StreamingService = None
 streaming_thread = None
-kafka_bridge: KafkaWebSocketBridge | None = None
-ws_broadcast_loop: asyncio.AbstractEventLoop | None = None
-# Cache structure: {ticker: {config: data}}
-# e.g., {'EURUSD=X': {'1d_5m': {...}, '1mo_1d': {...}}}
-latest_data_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
 tickers = [
     "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X", "USDCAD=X",
     "AUDUSD=X", "NZDUSD=X", "EURMAD=X", "EURRUB=X", "RUBUSD=X"
 ]
-
-def update_cache_and_broadcast(ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"):
-    """Update cache with partitioned data and broadcast to WebSocket clients"""
-    global latest_data_cache
-    
-    # Create partition key based on period and interval
-    partition_key = f"{period}_{interval}"
-    
-    # Initialize ticker cache if doesn't exist
-    if ticker not in latest_data_cache:
-        latest_data_cache[ticker] = {}
-    
-    # Store data in appropriate partition
-    latest_data_cache[ticker][partition_key] = message
-    
-    payload = {
-        "type": "price_update",
-        "ticker": ticker,
-        "data": message,
-        "partition": partition_key,
-    }
-
-    # WebSocket objects must be used from the main asyncio loop.
-    # If no client has connected yet (loop not captured), skip broadcast.
-    global ws_broadcast_loop
-    if ws_broadcast_loop is None:
-        return
-    try:
-        asyncio.run_coroutine_threadsafe(manager.broadcast(payload), ws_broadcast_loop)
-    except Exception as e:
-        print(f"Broadcast error for {ticker}: {e}")
-
-
-def update_cache_only(ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"):
-    """Update the cache without broadcasting.
-
-    When Kafka server-side mode is enabled, the WS broadcast should come from Kafka consumption.
-    """
-    global latest_data_cache
-    partition_key = f"{period}_{interval}"
-    if ticker not in latest_data_cache:
-        latest_data_cache[ticker] = {}
-    latest_data_cache[ticker][partition_key] = message
-
-
-def _topic_name(prefix: str, ticker: str) -> str:
-    return f"{prefix}_{ticker.lower().replace('=', '')}"
-
-
-def _start_kafka_bridge(topics: list[str]):
-    global kafka_bridge
-    if kafka_bridge and kafka_bridge.is_running:
-        return
-
-    def handle_kafka_message(msg: Dict[str, Any]):
-        try:
-            t = msg.get("ticker")
-            if not t:
-                return
-            period = msg.get("period") or "1d"
-            interval = msg.get("interval") or "1m"
-            # Keep cache in sync and broadcast to WS.
-            update_cache_and_broadcast(t, msg, period=period, interval=interval)
-        except Exception:
-            return
-
-    kafka_bridge = KafkaWebSocketBridge(on_message=handle_kafka_message)
-    kafka_bridge.start(topics)
-
-
-def _ws_mode() -> str:
-    # kafka: require kafka bridge
-    # direct: bypass kafka bridge, broadcast directly from yfinance polling
-    # auto: prefer kafka, but fall back to direct if kafka is unavailable
-    return (os.environ.get("WS_UPDATES_MODE") or "auto").strip().lower()
-
-
-def _stop_kafka_bridge():
-    global kafka_bridge
-    if kafka_bridge:
-        try:
-            kafka_bridge.stop()
-        except Exception:
-            pass
-    kafka_bridge = None
 
 @router.post("/start_streaming")
 async def start_streaming():
@@ -133,8 +52,9 @@ async def start_streaming():
             streaming_thread.join(timeout=5)
     
     streaming_service_instance = StreamingService()
-    # For realtime UI, always broadcast directly; Kafka bridge remains for downstream consumers.
-    callback = update_cache_and_broadcast
+    # When Kafka is OK, only update cache (Kafka bridge will broadcast)
+    # Otherwise, update cache and broadcast directly
+    callback = update_cache_only if kafka_ok else update_cache_and_broadcast
     streaming_thread = threading.Thread(
         target=lambda: streaming_service_instance.stream_hourly(tickers, callback),
         daemon=True
@@ -165,8 +85,9 @@ async def start_instant_streaming():
             streaming_thread.join(timeout=5)
     
     streaming_service_instance = StreamingService()
-    # For realtime UI, always broadcast directly; Kafka bridge remains for downstream consumers.
-    callback = update_cache_and_broadcast
+    # When Kafka is OK, only update cache (Kafka bridge will broadcast)
+    # Otherwise, update cache and broadcast directly
+    callback = update_cache_only if kafka_ok else update_cache_and_broadcast
     streaming_thread = threading.Thread(
         target=lambda: streaming_service_instance.stream_instant(tickers, callback),
         daemon=True
@@ -178,7 +99,6 @@ async def start_instant_streaming():
 async def stop_streaming():
     global streaming_service_instance, streaming_thread
     
-    # Always stop the Kafka bridge.
     _stop_kafka_bridge()
 
     if not streaming_service_instance or not streaming_service_instance.is_running:
@@ -195,8 +115,8 @@ async def stop_streaming():
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-    global ws_broadcast_loop
-    ws_broadcast_loop = asyncio.get_running_loop()
+    set_ws_broadcast_loop(asyncio.get_running_loop())
+    print(f"[WebSocket] Client connected, total connections: {len(manager.active_connections)}")
     try:
         while True:
             data = await websocket.receive_text()
@@ -204,6 +124,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        print(f"[WebSocket] Client disconnected, remaining connections: {len(manager.active_connections)}")
 
 @router.get("/status")
 async def get_status():
@@ -214,19 +135,6 @@ async def get_status():
         "tickers": tickers if is_active else [],
         "cached_tickers": list(latest_data_cache.keys())
     }
-
-def fetch_yfinance_data(ticker: str, period: str, interval: str):
-    """Safe wrapper for yfinance data fetching"""
-    try:
-        ticker_obj = yf.Ticker(ticker)
-        hist = ticker_obj.history(period=period, interval=interval)
-        
-        if hist is not None and isinstance(hist, pd.DataFrame) and not hist.empty:
-            return hist
-        return None
-    except Exception as e:
-        print(f"yfinance error for {ticker}: {e}")
-        return None
 
 @router.get("/data/{ticker}")
 async def get_forex_data(ticker: str, period: str = "1d", interval: str = None):

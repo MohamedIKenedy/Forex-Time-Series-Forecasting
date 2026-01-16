@@ -4,16 +4,49 @@ from services.features_services import FeatureStore
 from services.inference_services import InferenceService
 import asyncio
 from typing import List, Dict, Any
+from datetime import datetime, timedelta
 
 router = APIRouter()
 feature_store = FeatureStore()
 inference_service = InferenceService()
 
+inference_cache: Dict[str, Dict[str, Any]] = {}
+
+def get_cached_inference(ticker: str) -> Dict[str, Any] | None:
+    """Get cached inference if it exists and is from today (UTC)"""
+    if ticker not in inference_cache:
+        return None
+    
+    cached = inference_cache[ticker]
+    today = datetime.utcnow().date().isoformat()
+    
+    if cached.get("date") == today:
+        return cached["result"]
+    
+    del inference_cache[ticker]
+    return None
+
+def set_cached_inference(ticker: str, result: Dict[str, Any]) -> None:
+    """Cache inference result with today's date"""
+    today = datetime.utcnow().date().isoformat()
+    inference_cache[ticker] = {
+        "result": result,
+        "timestamp": datetime.utcnow(),
+        "date": today
+    }
+
+
 async def predict_single_ticker(ticker: str, lookback: int = 200) -> Dict[str, Any]:
     """
     Async function to predict for a single ticker.
+    Uses daily cache to avoid repeated inference computations.
     """
     try:
+        # Check cache first
+        cached = get_cached_inference(ticker)
+        if cached is not None:
+            return cached
+        
         if ticker not in feature_store.tickers:
             return {"ticker": ticker, "error": "Unsupported ticker"}
 
@@ -32,11 +65,16 @@ async def predict_single_ticker(ticker: str, lookback: int = 200) -> Dict[str, A
         else:
             direction = "SIDEWAYS"
         
-        return {
+        result = {
             "ticker": ticker,
             "predicted_log_return": round(prediction, 6),
             "direction": direction
         }
+        
+        # Cache the result
+        set_cached_inference(ticker, result)
+        
+        return result
     except Exception as e:
         return {"ticker": ticker, "error": str(e)}
 

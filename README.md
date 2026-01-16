@@ -1,150 +1,189 @@
-# Forex Time Series Forecasting - Complete MLOps Pipeline
+# Forex Time Series Forecasting — Production MLOps Pipeline
 
-This project implements a comprehensive MLOps pipeline for forecasting foreign exchange (FX) rates using advanced machine learning techniques. It includes hyperparameter tuning with Ray Tune, experiment tracking with MLflow, model serving, monitoring, and CI/CD automation.
+![Console screenshot](images/Main_Console.png)
 
-## 🚀 Key Features
+This repository implements a complete, production-oriented MLOps pipeline for foreign exchange (FX) rate forecasting. It bridges offline model training (data → features → tuning → serving) with a real-time streaming architecture (yfinance → Kafka → WebSocket). The system tracks experiments via MLflow, serves models via ONNX and FastAPI, and scales horizontally using Kafka for durable, partitioned message passing.
 
-### Core ML Pipeline
-* **Data Acquisition:** Automated download of historical FX rates for 10+ currency pairs using `yfinance`
-* **Advanced Feature Engineering:** 200+ features including lagged prices, technical indicators, and cross-currency correlations
-* **No Data Leakage:** Rigorous feature engineering ensuring no future information leaks into training
-* **Time Series Cross-Validation:** Proper evaluation using expanding window validation
+**Repository:** https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git
 
-### MLOps Enhancements
-* **🔍 Hyperparameter Tuning:** Ray Tune with ASHA scheduler and Optuna search for optimal model parameters
-* **📊 Experiment Tracking:** MLflow for comprehensive logging of metrics, parameters, and artifacts
-* **🏷️ Model Registry:** Version control and staging for trained models
-* **🔄 Model Serving:** REST API with FastAPI for real-time predictions
-* **📈 Monitoring:** Prometheus metrics and data drift detection
-* **🐳 Containerization:** Docker and Docker Compose for reproducible deployments
-* **🔄 CI/CD:** GitHub Actions for automated testing, training, and deployment
-* **📋 Ensemble Models:** Multiple model aggregation for improved predictions
+## Overview: What This Does
 
-## 🏗️ Architecture
+**Offline Training & Experimentation:**
+- Fetches historical FX candles from Yahoo Finance for 10+ currency pairs
+- Engineers 200+ features (lagged returns, rolling statistics, cross-ticker correlations) with zero data leakage
+- Tunes gradient boosting models using Ray Tune (distributed hyperparameter search) and logs all runs to MLflow
+- Exports trained models as ONNX for portable, efficient serving
+- Evaluates using proper time-series cross-validation (no forward-looking information leaks)
+
+**Real-Time Streaming & Serving:**
+- Polls market data at configurable intervals (1-minute, hourly, daily) via yfinance
+- Publishes candles to partitioned Kafka topics (deterministic per-ticker routing)
+- Consumes from Kafka in background threads and broadcasts updates via WebSocket to connected clients
+- Caches latest candles in memory (O(1) lookups by ticker/partition) and Redis (cross-instance coordination)
+- Reconstructs recent history on-demand for inference via a `FeatureStore` backed by Kafka
+
+**Deployment & Operations:**
+- Single docker-compose stack for local development (FastAPI, Kafka, MLflow, Redis)
+- Containerized service that scales horizontally (each instance handles its own WebSocket clients; Kafka fan-out ensures all get the same updates)
+- Health checks and graceful shutdown for reliable rolling upgrades
+
+## Architecture at a Glance
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Data Sources  │───▶│  Feature Eng.   │───▶│  Model Training │
-│   (yfinance)    │    │  (No Leakage)   │    │  (Ray Tune)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MLflow UI     │    │   Model Registry │    │   API Serving   │
-│ (Experiments)   │    │   (Versioning)  │    │   (FastAPI)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Monitoring    │    │   CI/CD Pipeline │    │   Docker        │
-│ (Prometheus)    │    │ (GitHub Actions) │    │ (Compose)       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│                        Real-Time Path                             │
+│                                                                   │
+│  yfinance  →  StreamingService  →  Kafka Topics  →  Bridge        │
+│              (blocking/thread)     (durable)      (thread)        │
+│                                                       ↓           │
+│                                   Cache + Broadcast (async core)  │
+│                                             ↓                     │
+│                                         WebSocket → Browser       │
+└───────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────┐
+│                    Offline Training Path                          │
+│                                                                   │
+│  yfinance  →  Feature Engineering  →  Ray Tune / GBM              │
+│   (historical)  (lagged returns,    (hyperparameter search)       │
+│                  rolling stats)         ↓                         │
+│                                    MLflow Tracking                │
+│                                    ONNX Export                    │
+│                                         ↓                         │
+│                                  inference_models/  (models)      │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-## 🛠️ Technologies Used
+## Core Components
 
-### Core ML & Data
-- **Python 3.9+** - Primary programming language
-- **XGBoost** - Gradient boosting for classification
-- **scikit-learn** - Data preprocessing and evaluation
-- **pandas/numpy** - Data manipulation
-- **yfinance** - Financial data acquisition
+**Data Ingestion & Streaming (`api/services/streaming_service.py`):**
+- Three modes: instant (1m/2m + sub-minute tick quotes), hourly, daily
+- Deduplicates repeated candles (same timestamp & close = skip)
+- Publishes to Kafka topics keyed by ticker for in-partition ordering
 
-### MLOps Stack
-- **Ray Tune** - Distributed hyperparameter tuning
-- **MLflow** - Experiment tracking and model management
-- **FastAPI** - High-performance API serving
-- **Docker** - Containerization
-- **Kafka** - Event streaming for monitoring
-- **Prometheus** - Metrics collection
-- **GitHub Actions** - CI/CD automation
+**Message Bus (`api/services/kafka_service.py`):**
+- Creates/expands topics with configurable partition counts
+- Deterministic partitioning via CRC32(ticker) ensures same ticker always lands on same partition
+- Producer config: `acks='all'`, `max_in_flight_requests=1` for durability and ordering
 
-## 📊 Model Performance
+**Consumer Bridge (`api/services/kafka_bridge.py`):**
+- Runs in background thread; does not block the async event loop
+- Deserializes messages and invokes handlers to update cache and schedule broadcasts
 
-| Ticker   | Accuracy | Sharpe Ratio | Win Rate |
-|----------|----------|--------------|----------|
-| EURUSD=X | 0.511    | -0.41        | 38.8%    |
-| GBPUSD=X | 0.503    | -0.01        | 39.5%    |
-| USDJPY=X | 0.491    | 0.32         | 37.7%    |
-| USDCHF=X | 0.494    | -0.26        | 38.6%    |
-| USDCAD=X | 0.497    | 0.19         | 38.9%    |
-| AUDUSD=X | 0.498    | -0.47        | 40.9%    |
-| NZDUSD=X | 0.506    | -0.25        | 41.3%    |
+**Cache & Broadcast (`api/services/utils/stream_utils.py` & `api/services/conn_management.py`):**
+- In-memory `latest_data_cache[ticker][period_interval]` for O(1) reads
+- `ConnectionManager` uses a set for O(1) WebSocket add/remove
+- Broadcasts scheduled via `asyncio.run_coroutine_threadsafe()` from workers to the async core
 
-*Results from 5-fold time series cross-validation with hyperparameter tuning*
+**Feature Engineering (`api/services/features_services.py`):**
+- On-demand reconstruction of recent history from Kafka topics
+- Computes lags, log returns, rolling stats, forward fills missing values
+- Used by both offline training and online inference paths
 
-## 🚀 Quick Start
+**Model Serving (`api/services/inference_services.py` & `api/services/predictor.py`):**
+- Loads ONNX models and scalers from `inference_models/`; caches in memory to avoid repeated I/O
+- For production: run in separate process/container to avoid blocking broadcasts
 
-### Local Development
+**Auxiliary Services:**
+- `api/services/cache_services.py`: Redis-backed TTL caching for latest prices (cross-instance coordination)
+- `api/models/forex.py`: ORM/schema definitions
+- `api/routes/`: REST endpoints for health, data, stream control, inference
 
-1. **Clone and setup:**
+## Tech Stack
+
+|         Layer           |          Technology                |
+|-------------------------|------------------------------------|
+| **Web & Async**         | FastAPI, Uvicorn, asyncio          |
+| **Data & ETL**          | pandas, numpy, yfinance            |
+| **Streaming**           | Kafka (kafka-python), Redis        |
+| **ML Training**         | GBM, scikit-learn, Torch, Ray Tune |
+| **Experiment Tracking** | MLflow                             |
+| **Model Serving**       | ONNX Runtime                       |
+| **Containerization**    | Docker, docker-compose             |
+| **CI/CD**               | Jenkins, PyTest(For testing)       |
+
+## Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose (recommended) or Python 3.9+
+- Git
+
+### 1. Clone and Navigate
+
 ```bash
-git clone <repository-url>
-cd forex-time-series-forecasting
+git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git
+cd Forex-Time-Series-Forecasting
 ```
 
-2. **Start the full stack:**
+### 2. Start the Full Stack (Docker Compose)
+
 ```bash
 docker-compose up -d
 ```
 
-3. **Access services:**
-- MLflow UI: http://localhost:5000
-- API: http://localhost:8000
-- Monitoring: http://localhost:9090
-- Kafka: localhost:9092
+This starts:
+- **FastAPI** (http://localhost:8000) with WebSocket support
+- **Kafka** (localhost:9092) for message streaming
+- **MLflow** (http://localhost:5000) for experiment tracking by running mlflow ui --port 5000 --host 0.0.0.0
 
-### Training Models
+### 3. Access Dashboards
+
+- **API Docs:** http://localhost:8000/docs (Swagger UI)
+- **MLflow UI:** http://localhost:5000 (view training runs & artifacts)
+
+### 4. Start Streaming (if not auto-started)
 
 ```bash
-# Run hyperparameter tuning and training
-docker-compose --profile training up training
+curl -X POST http://localhost:8000/stream/start_instant_streaming \
+  -H "Content-Type: application/json" \
+  -d '{"tickers": ["EURUSD=X", "GBPUSD=X", "USDJPY=X"]}'
+```
 
-# Or run locally
+### 5. Open WebSocket Client
+
+Use the frontend at `ui/forex-dash/` (already served via docker-compose) or connect to `ws://localhost:8000/stream/ws` from a client.
+
+## Local Development (Without Docker)
+
+### Install Dependencies
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
 pip install -r api/requirements.txt
-python -c "exec(open('Notebooks/forex_forecasting_v1.ipynb').read())"
 ```
 
-### API Usage
-
-```python
-import requests
-
-# Get prediction for EURUSD
-response = requests.post("http://localhost:8000/predict", json={
-    "ticker": "EURUSD=X",
-    "features": {...}  # Feature dictionary
-})
-
-prediction = response.json()
-print(f"Signal: {prediction['signal']}, Confidence: {prediction['confidence']}")
-```
-
-## 📁 Project Structure
-
-```
-├── Notebooks/                 # Jupyter notebooks
-│   └── forex_forecasting_v1.ipynb
-├── api/                       # FastAPI application
-│   ├── main.py
-│   ├── config.py
-│   └── requirements.txt
-├── scripts/                   # Utility scripts
-│   ├── model_serving.py
-│   └── monitoring.py
-├── models/                    # Trained models
-├── scalers/                   # Feature scalers
-├── mlruns/                    # MLflow experiments
-├── docker-compose.yml         # Local development stack
-├── Dockerfile                 # Container definitions
-└── .github/workflows/         # CI/CD pipelines
-```
-
-## 🔧 Configuration
-
-### Environment Variables
+### Run API
 
 ```bash
+cd api
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Run Training/Tuning
+
+```bash
+cd Notebooks
+jupyter notebook forex_forecasting.ipynb
+# or
+python -m jupyter lab
+
+## Configuration
+
+All configuration is driven by environment variables (see `api/config.py`). Key variables:
+
+```bash
+# Kafka
+KAFKA_BROKERS=localhost:9092
+
+# Redis (for caching)
+REDIS_URL=redis://localhost:6379/0
+
+# Streaming mode (auto, direct, kafka)
+WS_UPDATES_MODE=kafka
+
 # MLflow
 MLFLOW_TRACKING_URI=http://localhost:5000
 
@@ -152,79 +191,69 @@ MLFLOW_TRACKING_URI=http://localhost:5000
 API_HOST=0.0.0.0
 API_PORT=8000
 
-# Kafka
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# Ray
-RAY_ADDRESS=auto
 ```
 
-### Model Configuration
+## Common Tasks
 
-Models are automatically tuned using Ray Tune with the following search spaces:
+### Run Model Training with Hyperparameter Tuning
 
-- `n_estimators`: 50-500
-- `max_depth`: 3-10
-- `learning_rate`: 0.01-0.3 (log scale)
-- `subsample`: 0.6-1.0
-- `colsample_bytree`: 0.6-1.0
-- `scale_pos_weight`: 0.5-2.0
+```bash
+cd Notebooks
+# Edit config in forex_forecasting.ipynb, then run all cells
+# Experiments are logged to MLflow (http://localhost:5000)
+```
 
-## 📊 Monitoring & Observability
+### Start Real-Time Streaming for a Ticker
 
-### Metrics Collected
+```bash
+curl -X POST http://localhost:8000/stream/start_instant_streaming \
+  -H "Content-Type: application/json" \
+  -d '{"tickers": ["EURUSD=X", "GBPUSD=X"]}'
+```
 
-- **Model Performance:** Accuracy, precision, Sharpe ratio, win rate
-- **System Health:** API response time, error rates
-- **Data Quality:** Data drift scores, missing values
-- **Business Metrics:** Prediction confidence, trading signals
+### Get Latest Price from Cache
 
-### Dashboards
+```bash
+curl http://localhost:8000/data/latest/EURUSD=X
+```
 
-Access monitoring dashboards:
-- **Prometheus:** http://localhost:9090
-- **MLflow:** http://localhost:5000
-- **API Health:** http://localhost:8000/docs
+### Run Inference (Predict Next Movement)
 
-## 🔄 CI/CD Pipeline
+```bash
+curl -X POST http://localhost:8000/inference/predict \
+  -H "Content-Type: application/json" \
+  -d '{"ticker": "EURUSD=X"}'
+```
 
-### Automated Workflows
+### View Experiment Results
 
-1. **Code Quality:** Linting, formatting, and testing
-2. **Model Training:** Automated retraining on new data
-3. **Model Deployment:** Rolling updates with canary deployments
-4. **Monitoring:** Automated alerts for model drift
+Navigate to http://localhost:5000 → click on a run → view metrics, parameters, and exported model artifacts.
 
-### Deployment Targets
+## Monitoring & Observability
 
-- **Development:** Local Docker Compose
-- **Staging:** Azure ML or similar cloud service
-- **Production:** Kubernetes with Istio service mesh
+- **Latency Tracking:** Instrument end-to-end latency from produce → consume → broadcast
+- **Logs:** Check container logs via `docker-compose logs -f api`
+- **Health Check:** `curl http://localhost:8000/health`
+- **Kafka Status:** Monitor via Kafka admin tools (e.g., `kafka-topics.sh`, `kafka-consumer-groups.sh`)
 
-## 🤝 Contributing
+
+
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make changes with proper tests
-4. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Implement changes with tests
+4. Format with `black` and lint with `flake8`
+5. Submit a pull request
 
-### Development Guidelines
+## License
 
-- Use `black` for code formatting
-- Write tests for new features
-- Update documentation
-- Follow semantic versioning
+MIT License — see `LICENSE` for details.
 
-## 📄 License
+## Disclaimer
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Yahoo Finance for market data
-- Ray, MLflow, and FastAPI communities
-- Open source ML ecosystem
+This system is for research and educational purposes. Do **not** use for live trading without extensive backtesting, risk management, and validation. Past performance does not guarantee future results.
 
 ---
 
-**Note:** This system is for educational and research purposes. Always perform thorough backtesting and risk management before using in live trading.
+**For questions or issues**, open a GitHub issue or reach out via the project repository.

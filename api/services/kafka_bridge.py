@@ -61,7 +61,9 @@ class KafkaWebSocketBridge:
                 auto_offset_reset="latest",
                 enable_auto_commit=True,
                 consumer_timeout_ms=1000,
-                request_timeout_ms=10000,
+                session_timeout_ms=6000,
+                heartbeat_interval_ms=2000,
+                request_timeout_ms=30000,
                 api_version_auto_timeout_ms=10000,
             )
         except NoBrokersAvailable as e:
@@ -101,9 +103,11 @@ class KafkaWebSocketBridge:
                         value = msg.value
                         if isinstance(value, dict):
                             self._on_message(value)
-                    except Exception:
+                    except Exception as e:
+                        print(f"[Kafka Bridge] Message processing error: {e}")
                         continue
-            except Exception:
+            except Exception as e:
+                print(f"[Kafka Bridge] Consumer error: {e}")
                 time.sleep(0.25)
 
         try:

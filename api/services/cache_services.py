@@ -3,6 +3,7 @@ from config import settings
 import asyncio
 from typing import Dict, Any
 from services.conn_management import manager
+from services.utils.stream_utils import latest_data_cache
 
 class CacheService:
     def __init__(self):
@@ -23,7 +24,6 @@ class CacheService:
     
     async def cache_message(ticker: str, message: Dict[str, Any]):
         """Callback to cache messages and broadcast via WebSocket"""
-        global latest_data_cache
         latest_data_cache[ticker] = message
         
         try:
