@@ -113,7 +113,11 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 
 ```bash
 git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git
+<<<<<<< HEAD
 cd Forex-Time-Series-Forecasting
+=======
+cd forex-time-series-forecasting
+>>>>>>> 14afb3f24933d4693e2c002dd1dad669279815da
 ```
 
 ### 2. Start the Full Stack (Docker Compose)
