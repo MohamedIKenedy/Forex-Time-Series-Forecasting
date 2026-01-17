@@ -1,4 +1,4 @@
-import { startInstantStreaming, startStreaming, stopStreaming, getStreamingStatus, getForexData, getKafkaDiagram, getKafkaHealth, getKafkaTopics, getInference, getInferenceMetadata } from './api';
+import { startInstantStreaming, stopStreaming, getStreamingStatus, getForexData, getKafkaDiagram, getKafkaHealth, getKafkaTopics, getInference, getInferenceMetadata } from './api';
 import type { TerminalOutput } from './types';
 
 export class CommandHandler {
@@ -108,7 +108,7 @@ export class CommandHandler {
     return `${header}\n${sep}\n${body}`;
   }
 
-  private async handleStart(args: string[]): Promise<TerminalOutput> {
+  private async handleStart(_args: string[]): Promise<TerminalOutput> {
     // Default to instant mode so the UI feels realtime.
     // Users can still switch via `options hourly`.
     await startInstantStreaming();
@@ -156,11 +156,11 @@ Last Update: ${status.lastUpdate || 'N/A'}`;
     
     try {
       await stopStreaming();
-      const response = await fetch(`http://localhost:8000/stream/${endpoint}`, {
+      await fetch(`http://localhost:8000/stream/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await response.json();
+      // Response data not needed for this operation
       return {
         id: this.generateId(),
         content: `✓ Switched to ${mode} mode`,

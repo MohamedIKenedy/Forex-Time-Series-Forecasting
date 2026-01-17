@@ -45,9 +45,9 @@ export const PlotDisplay: React.FC<PlotDisplayProps> = ({ ticker, data, onClose 
             },
           ]}
           layout={{
-            title: `${ticker} Price Chart`,
-            xaxis: { title: 'Time' },
-            yaxis: { title: 'Price' },
+            title: { text: `${ticker} Price Chart` },
+            xaxis: { title: { text: 'Time' } },
+            yaxis: { title: { text: 'Price' } },
             plot_bgcolor: '#0d1117',
             paper_bgcolor: '#0d1117',
             font: { color: '#c9d1d9' },

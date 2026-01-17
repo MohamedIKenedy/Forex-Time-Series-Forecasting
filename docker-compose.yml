@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -26,69 +24,44 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
 
-  mlflow:
-    build:
-      context: .
-      dockerfile: Dockerfile.mlflow
-    container_name: forex-mlflow
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./mlruns:/app/mlruns
-      - ./mlartifacts:/app/mlartifacts
-    environment:
-      - MLFLOW_TRACKING_URI=file:/app/mlruns
-    command: mlflow ui --host 0.0.0.0 --port 5000
-
   api:
     build:
-      context: .
-      target: production
+      context: ./api
+      dockerfile: Dockerfile
     container_name: forex-api
     ports:
       - "8000:8000"
     depends_on:
-      - mlflow
       - kafka
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - WS_UPDATES_MODE=kafka
     volumes:
-      - ./exported_models:/app/exported_models:ro
+      - ./api/inference_models:/app/inference_models:ro
+      - ./api/logs:/app/logs
+    environment:
+      - WS_UPDATES_MODE=kafka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
-  training:
+  frontend:
     build:
-      context: .
-      target: training
-    container_name: forex-training
-    depends_on:
-      - mlflow
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-    volumes:
-      - ./Notebooks:/app/Notebooks
-      - ./mlruns:/app/mlruns
-      - ./models:/app/models
-      - ./scalers:/app/scalers
-    profiles:
-      - training  # Only run when explicitly requested
-
-  monitoring:
-    build:
-      context: .
-      dockerfile: Dockerfile.monitoring
-    container_name: forex-monitoring
+      context: ./ui/forex-dash
+      dockerfile: Dockerfile
+    container_name: forex-frontend
+    ports:
+      - "5173:80"
     depends_on:
       - api
-      - kafka
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - API_URL=http://api:8000
-    profiles:
-      - monitoring
+      - REACT_APP_API_URL=http://localhost:8000
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+
+

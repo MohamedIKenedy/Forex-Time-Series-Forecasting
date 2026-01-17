@@ -114,7 +114,7 @@ class KafkaService:
             )
 
         except KafkaError as e:
-            logger.erro(f"Failed to send msg: {e}")
+            logger.error(f"Failed to send msg: {e}")
 
     
 
