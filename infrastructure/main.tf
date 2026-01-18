@@ -108,15 +108,3 @@ resource "aws_instance" "forex" {
     Name = "${var.name}-instance"
   }
 }
-
-output "public_ip" {
-  value = aws_instance.forex.public_ip
-}
-
-output "instance_id" {
-  value = aws_instance.forex.id
-}
-
-output "security_group_id" {
-  value = aws_security_group.forex_sg.id
-}
