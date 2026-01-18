@@ -168,7 +168,7 @@ async def get_forex_data(ticker: str, period: str = "1d", interval: str = None):
     """Fetch historical forex data for a given ticker and period."""
 
     period_config_map = {
-        "1d": ("1d", "1m"),
+        "1d": ("1d", "5m"),
         "5d": ("5d", "5m"),
         "1mo": ("2mo", "1d"),
         "3mo": ("3mo", "1d"),

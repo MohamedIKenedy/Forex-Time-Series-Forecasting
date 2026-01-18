@@ -117,8 +117,8 @@ async def test_get_forex_data_fallback_strategy(mock_yfinance_ticker):
 
     result = await get_forex_data("EURUSD=X", period="1d")
 
-    assert result["period"] == "5d"
-    assert result["interval"] == "1h"
+    assert result["period"] == "1d"
+    assert result["interval"] == "5m"
     assert len(result["data"]) == 1
 
 
@@ -137,14 +137,15 @@ async def test_get_forex_data_all_fail(mock_yfinance_ticker):
 
 
 @pytest.mark.asyncio
-async def test_get_forex_data_streaming_integration(mock_yfinance_ticker):
+async def test_get_forex_data_streaming_integration(mock_yfinance_ticker, monkeypatch):
     """Test integration with streaming cache."""
-    from api.routes.stream import streaming_service_instance, latest_data_cache
+    from api.routes import stream
 
     # Mock active streaming
-    streaming_service_instance = MagicMock()
-    streaming_service_instance.is_running = True
-    latest_data_cache["EURUSD=X"] = {"close": 1.1000, "other": "data"}
+    mock_streaming = MagicMock()
+    mock_streaming.is_running = True
+    monkeypatch.setattr(stream, 'streaming_service_instance', mock_streaming)
+    monkeypatch.setattr(stream, 'latest_data_cache', {"EURUSD=X": {"1d_5m": {"close": 1.1000, "other": "data"}}})
 
     mock_ticker_instance = MagicMock()
     mock_df = pd.DataFrame(
@@ -166,7 +167,3 @@ async def test_get_forex_data_streaming_integration(mock_yfinance_ticker):
     assert "latest" in result
     assert result["latest"]["close"] == 1.1000
     assert result["latest_price"] == 1.1000  # Prefers cache
-
-    # Cleanup
-    streaming_service_instance = None
-    latest_data_cache.clear()
