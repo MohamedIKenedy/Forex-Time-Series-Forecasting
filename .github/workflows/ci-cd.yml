@@ -117,9 +117,9 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
-        PUBLIC_IP=$(terraform output -raw public_ip)
+        PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null)
         echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
-        echo "Public IP: $PUBLIC_IP"
+        echo "Public IP captured: $PUBLIC_IP"
 
   deploy:
     runs-on: ubuntu-latest
