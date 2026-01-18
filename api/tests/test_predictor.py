@@ -13,10 +13,10 @@ def test_predictor_predict():
     # Use actual ONNX model and scaler
     model_path = "exported_models/EURUSD=X/model_fold_3.onnx"
     scaler_path = "exported_models/scalers/EURUSD=X/best_scaler_x.pkl"
-    
+
     if not os.path.exists(model_path):
         pytest.skip("Model file not found, skipping predictor test")
-    
+
     ort_session = ort.InferenceSession(model_path)
 
     predictor = Predictor(
