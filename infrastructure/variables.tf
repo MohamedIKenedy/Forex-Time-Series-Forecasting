@@ -5,7 +5,7 @@ variable "aws_region" {
 
 variable "name" {
   type    = string
-  default = "forex-app"
+  default = "forex-app-2026"
 }
 
 variable "instance_type" {
@@ -15,7 +15,7 @@ variable "instance_type" {
 
 variable "key_name" {
   type    = string
-  default = "forex-deployer-key"
+  default = "forex-deployer-key-2026"
 }
 
 variable "public_key_path" {
