@@ -81,29 +81,25 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: train
+    needs: [train, docker]
     if: github.ref == 'refs/heads/main'
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Deploy to AWS EC2
+      uses: appleboy/ssh-action@v0.1.10
       with:
-        python-version: '3.9'
-
-    - name: Install dependencies
-      run: |
-        pip install mlflow azureml-sdk
-
-    - name: Deploy to Azure ML
-      run: |
-        # Register models in Azure ML
-        python scripts/deploy_to_azure.py
-      env:
-        AZURE_ML_WORKSPACE: ${{ secrets.AZURE_ML_WORKSPACE }}
-        AZURE_ML_SUBSCRIPTION: ${{ secrets.AZURE_ML_SUBSCRIPTION }}
-        AZURE_ML_RESOURCE_GROUP: ${{ secrets.AZURE_ML_RESOURCE_GROUP }}
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          cd /home/ubuntu/forex-app  # Adjust path as needed
+          export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
 
   docker:
     runs-on: ubuntu-latest
@@ -128,6 +124,13 @@ jobs:
         context: ./api
         push: true
         tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-api:latest
+
+    - name: Build and push Frontend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./ui/forex-dash
+        push: true
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-frontend:latest
 
     - name: Build and push ML training image
       uses: docker/build-push-action@v4
