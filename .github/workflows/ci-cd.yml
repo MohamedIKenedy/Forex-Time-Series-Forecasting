@@ -2,9 +2,9 @@ name: Forex ML Pipeline CI/CD
 
 on:
   push:
-    branches: [ main, develop, Deployment-Branch ]
+    branches: [ master, develop, Deployment-Branch ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -133,11 +133,3 @@ jobs:
         context: ./ui/forex-dash
         push: true
         tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-frontend:latest
-
-    - name: Build and push ML training image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./Dockerfile.train
-        push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/forex-train:latest
