@@ -2,6 +2,10 @@ provider "aws" {
   region = var.aws_region
 }
 
+resource "random_id" "suffix" {
+  byte_length = 4
+}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"]
@@ -12,12 +16,12 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name   = var.key_name
+  key_name   = "${var.key_name}-${random_id.suffix.hex}"
   public_key = file(var.public_key_path)
 }
 
 resource "aws_security_group" "forex_sg" {
-  name        = "${var.name}-sg"
+  name        = "${var.name}-sg-${random_id.suffix.hex}"
   description = "Security group for forex app"
 
   ingress {
@@ -79,6 +83,6 @@ resource "aws_instance" "forex" {
               EOF
 
   tags = {
-    Name = "${var.name}-instance"
+    Name = "${var.name}-instance-${random_id.suffix.hex}"
   }
 }
