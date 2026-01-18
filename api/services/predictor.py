@@ -1,4 +1,3 @@
-from exported_models import *
 import torch
 import torch.nn as nn
 import onnxruntime as ort
