@@ -52,37 +52,11 @@ resource "aws_security_group" "forex_sg" {
   }
 }
 
-data "aws_iam_policy_document" "ssm_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "ssm_role" {
-  name               = "${var.name}-ssm-role"
-  assume_role_policy = data.aws_iam_policy_document.ssm_assume.json
-}
-
-resource "aws_iam_role_policy_attachment" "ssm_attach" {
-  role       = aws_iam_role.ssm_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_instance_profile" "ssm_profile" {
-  name = "${var.name}-ssm-profile"
-  role = aws_iam_role.ssm_role.name
-}
-
 resource "aws_instance" "forex" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.forex_sg.id]
-  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
 
   user_data = <<-EOF
               #!/bin/bash
