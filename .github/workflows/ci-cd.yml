@@ -120,13 +120,11 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
-        # Try multiple methods to capture the public IP
-        PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null || echo "")
-        if [ -z "$PUBLIC_IP" ]; then
-          PUBLIC_IP=$(terraform output public_ip 2>/dev/null | grep -oP '(?<=public_ip = ")[^"]*' || echo "")
-        fi
-        if [ -z "$PUBLIC_IP" ]; then
-          PUBLIC_IP=$(terraform output -json 2>/dev/null | jq -r '.public_ip.value' || echo "")
+        # Write IP to file to avoid command substitution issues
+        terraform output -raw public_ip > public_ip.txt 2>/dev/null || terraform output public_ip > public_ip_raw.txt 2>/dev/null || echo "" > public_ip.txt
+        PUBLIC_IP=$(cat public_ip.txt | tr -d '\n' | tr -d '\r')
+        if [ -z "$PUBLIC_IP" ] && [ -f "public_ip_raw.txt" ]; then
+          PUBLIC_IP=$(cat public_ip_raw.txt | grep -oP '(?<=public_ip = ")[^"]*' | tr -d '\n' | tr -d '\r')
         fi
         echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
         echo "Final Public IP: $PUBLIC_IP"
