@@ -236,7 +236,9 @@ async def get_forex_data(ticker: str, period: str = "1d", interval: str = None):
 
     latest_price = historical_data[-1].get("Close") if historical_data else None
 
-    is_streaming = streaming_service_instance is not None and streaming_service_instance.is_running
+    is_streaming = (
+        streaming_service_instance is not None and streaming_service_instance.is_running
+    )
 
     response = {
         "ticker": ticker,
