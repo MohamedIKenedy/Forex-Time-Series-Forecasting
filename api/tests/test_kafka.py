@@ -4,6 +4,7 @@ import logging
 import sys
 import os
 import pytest
+from kafka.errors import NoBrokersAvailable
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
@@ -11,6 +12,17 @@ from services.kafka_service import KafkaService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def skip_if_no_kafka():
+    """Skip all Kafka tests if Kafka is not available"""
+    try:
+        kafka_service = KafkaService(brokers=["localhost:9092"])
+        kafka_service.create_producer()
+        kafka_service.close()
+    except NoBrokersAvailable:
+        pytest.skip("Kafka not available, skipping Kafka tests")
 
 
 # ============== TEST 1: Single Producer, Single Consumer ==============
