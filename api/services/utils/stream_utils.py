@@ -22,7 +22,6 @@ def set_ws_broadcast_loop(loop: asyncio.AbstractEventLoop):
 
 def update_cache_and_broadcast(ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"):
     """Update cache with partitioned data and broadcast to WebSocket clients"""
-    global latest_data_cache
     
     partition_key = f"{period}_{interval}"
     
@@ -52,7 +51,6 @@ def update_cache_only(ticker: str, message: Dict[str, Any], period: str = "1d", 
 
     When Kafka server-side mode is enabled, the WS broadcast should come from Kafka consumption.
     """
-    global latest_data_cache
     partition_key = f"{period}_{interval}"
     if ticker not in latest_data_cache:
         latest_data_cache[ticker] = {}
