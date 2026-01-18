@@ -144,8 +144,12 @@ async def test_get_forex_data_streaming_integration(mock_yfinance_ticker, monkey
     # Mock active streaming
     mock_streaming = MagicMock()
     mock_streaming.is_running = True
-    monkeypatch.setattr(stream, 'streaming_service_instance', mock_streaming)
-    monkeypatch.setattr(stream, 'latest_data_cache', {"EURUSD=X": {"1d_5m": {"close": 1.1000, "other": "data"}}})
+    monkeypatch.setattr(stream, "streaming_service_instance", mock_streaming)
+    monkeypatch.setattr(
+        stream,
+        "latest_data_cache",
+        {"EURUSD=X": {"1d_5m": {"close": 1.1000, "other": "data"}}},
+    )
 
     mock_ticker_instance = MagicMock()
     mock_df = pd.DataFrame(
