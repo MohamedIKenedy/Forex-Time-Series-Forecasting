@@ -35,7 +35,7 @@ def _architecture_diagram(brokers: List[str]) -> str:
             "        |",
             "  [StreamingService]",
             "        |\\ ",
-            "        | \\ produce candles", 
+            "        | \\ produce candles",
             "        |  \\ (instant / hourly / daily)",
             "        v   v",
             f"  [Kafka broker(s): {brokers_str}]",
@@ -69,12 +69,17 @@ def _get_consumer():
     except KafkaError as e:
         raise HTTPException(status_code=503, detail=f"Kafka error: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create Kafka consumer: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create Kafka consumer: {e}"
+        )
 
 
 @router.get("/diagram")
 async def get_kafka_diagram() -> Dict[str, Any]:
-    return {"brokers": settings.kafka_brokers, "diagram": _architecture_diagram(settings.kafka_brokers)}
+    return {
+        "brokers": settings.kafka_brokers,
+        "diagram": _architecture_diagram(settings.kafka_brokers),
+    }
 
 
 @router.get("/health")

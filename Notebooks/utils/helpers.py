@@ -17,7 +17,9 @@ class LSTMForsecasterHelper:
             outputs = model(X_batch)
             loss = criterion(outputs, y_batch)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), max_norm=1.0
+            )  # Gradient clipping
             optimizer.step()
 
             total_loss += loss.item()
@@ -45,8 +47,10 @@ class LSTMForsecasterHelper:
 
         return total_loss / len(test_loader), predictions, actuals
 
+
 class EarlyStopping:
     """Early stopping to prevent overfitting"""
+
     def __init__(self, patience=15, min_delta=1e-4):
         self.patience = patience
         self.min_delta = min_delta
@@ -64,7 +68,3 @@ class EarlyStopping:
         else:
             self.best_loss = val_loss
             self.counter = 0
-
-
-
-

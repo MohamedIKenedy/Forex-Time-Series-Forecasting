@@ -9,7 +9,7 @@ from config import settings
 try:
     from kafka import KafkaConsumer
     from kafka.errors import KafkaError, NoBrokersAvailable
-except Exception:  
+except Exception:
     KafkaConsumer = None
     KafkaError = Exception
     NoBrokersAvailable = Exception
@@ -57,7 +57,9 @@ class KafkaWebSocketBridge:
                 *self._topics,
                 bootstrap_servers=settings.kafka_brokers,
                 group_id=self._group_id,
-                value_deserializer=lambda m: __import__("json").loads(m.decode("utf-8")),
+                value_deserializer=lambda m: __import__("json").loads(
+                    m.decode("utf-8")
+                ),
                 auto_offset_reset="latest",
                 enable_auto_commit=True,
                 consumer_timeout_ms=1000,
@@ -73,7 +75,9 @@ class KafkaWebSocketBridge:
             self._consumer = None
             raise RuntimeError(f"Kafka error: {e}")
 
-        self._thread = threading.Thread(target=self._run, name="kafka-ws-bridge", daemon=True)
+        self._thread = threading.Thread(
+            target=self._run, name="kafka-ws-bridge", daemon=True
+        )
         self._thread.start()
 
     def stop(self) -> None:

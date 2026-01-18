@@ -12,7 +12,9 @@ class LSTMForecaster(nn.Module):
             hidden_size,
             num_layers,
             batch_first=True,
-            dropout=dropout if num_layers > 1 else 0  # Dropout only works with num_layers > 1
+            dropout=(
+                dropout if num_layers > 1 else 0
+            ),  # Dropout only works with num_layers > 1
         )
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_size, output_size)

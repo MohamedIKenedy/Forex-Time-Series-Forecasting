@@ -5,11 +5,12 @@ import os
 
 router = APIRouter()
 
+
 @router.get("/health")
 async def health_check():
     status = {"api": "healthy", "kafka": "unknown", "model": {}}
 
-    #Check Kafka
+    # Check Kafka
     try:
         kafka = KafkaService()
         kafka.create_producer()
@@ -17,7 +18,7 @@ async def health_check():
         status["kafka"] = "healthy"
     except Exception as e:
         status["kafka"] = f"unhealthy: {str(e)}"
-    
+
     # Check model health
     models_dir = "api/exported_models"
     if os.path.exists(models_dir):
@@ -35,7 +36,12 @@ async def health_check():
     else:
         status["models"] = {"error": "exported_models directory not found"}
 
-    overall_status = 200 if (status["kafka"] == "healthy" and 
-                             all(s == "healthy" for s in status["models"].values())) else 503
+    overall_status = (
+        200
+        if (
+            status["kafka"] == "healthy"
+            and all(s == "healthy" for s in status["models"].values())
+        )
+        else 503
+    )
     return {"status": status, "code": overall_status}
-        

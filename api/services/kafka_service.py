@@ -9,20 +9,22 @@ import zlib
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
+
 class KafkaService:
-    """ Kafka Service class to handle producer and consumer ops for forex data in real-time """
+    """Kafka Service class to handle producer and consumer ops for forex data in real-time"""
+
     def __init__(
         self,
-        brokers: list = ['localhost:9092'],
+        brokers: list = ["localhost:9092"],
         group_id: str | None = None,
-        topic_partitions: int = 10         
+        topic_partitions: int = 10,
     ):
-        """ Init the kafka service with broker connection
-            Args:
-                - List of brokers
-                - Consumer group name
+        """Init the kafka service with broker connection
+        Args:
+            - List of brokers
+            - Consumer group name
 
-         """
+        """
         self.brokers = brokers
         self.group_id = group_id
         self.producer = None
@@ -30,17 +32,16 @@ class KafkaService:
         self.admin: KafkaAdminClient | None = None
         self.topic_partitions = max(1, int(topic_partitions))
 
-        
     def create_producer(self) -> KafkaProducer:
-        """ Create a Kafka Producer for publishing messages """
+        """Create a Kafka Producer for publishing messages"""
         if self.producer is None:
             try:
                 self.producer = KafkaProducer(
-                    bootstrap_servers = self.brokers,
-                    value_serializer = lambda v: json.dumps(v).encode('utf-8'),
-                    acks='all',
-                    retries = 3,
-                    max_in_flight_requests_per_connection = 1
+                    bootstrap_servers=self.brokers,
+                    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                    acks="all",
+                    retries=3,
+                    max_in_flight_requests_per_connection=1,
                 )
                 logger.info("Kafka producer successfully created")
             except KafkaError as e:
@@ -67,28 +68,40 @@ class KafkaService:
             if len(current) >= self.topic_partitions:
                 return
             try:
-                self.admin.create_partitions({topic: NewPartitions(total_count=self.topic_partitions)})
-                logger.info(f"Expanded topic {topic} to {self.topic_partitions} partitions")
+                self.admin.create_partitions(
+                    {topic: NewPartitions(total_count=self.topic_partitions)}
+                )
+                logger.info(
+                    f"Expanded topic {topic} to {self.topic_partitions} partitions"
+                )
             except TopicAlreadyExistsError:
                 return
         except KafkaError:
             # Try create if describe failed
             try:
-                new_topic = NewTopic(name=topic, num_partitions=self.topic_partitions, replication_factor=1)
+                new_topic = NewTopic(
+                    name=topic,
+                    num_partitions=self.topic_partitions,
+                    replication_factor=1,
+                )
                 self.admin.create_topics([new_topic])
-                logger.info(f"Created topic {topic} with {self.topic_partitions} partitions")
+                logger.info(
+                    f"Created topic {topic} with {self.topic_partitions} partitions"
+                )
             except TopicAlreadyExistsError:
                 return
             except KafkaError as e:
                 logger.warning(f"Unable to ensure partitions for {topic}: {e}")
 
-    def produce_message(self, topic: str, message: Dict[str,Any], key: str | None = None):
-        """ Send a message to a kafka topic """
+    def produce_message(
+        self, topic: str, message: Dict[str, Any], key: str | None = None
+    ):
+        """Send a message to a kafka topic"""
         if self.producer is None:
             self.create_producer()
 
         try:
-            key_bytes = key.encode('utf-8') if key else None
+            key_bytes = key.encode("utf-8") if key else None
 
             # Make sure the topic has multiple partitions and route deterministically by ticker key.
             self.ensure_partitions(topic)
@@ -98,10 +111,7 @@ class KafkaService:
 
             # Send messages in an async manner (That's me writing hahaha)
             future = self.producer.send(
-                topic,
-                value = message,
-                key = key_bytes,
-                partition = partition_id
+                topic, value=message, key=key_bytes, partition=partition_id
             )
 
             metadata = future.get(timeout=10)
@@ -116,30 +126,34 @@ class KafkaService:
         except KafkaError as e:
             logger.error(f"Failed to send msg: {e}")
 
-    
-
-    def create_consumer(self, topics: list, auto_offset_reset: str = 'latest') -> KafkaConsumer:
-        """ Create a kafka consumer to read msgs from topics """
+    def create_consumer(
+        self, topics: list, auto_offset_reset: str = "latest"
+    ) -> KafkaConsumer:
+        """Create a kafka consumer to read msgs from topics"""
         if self.consumer is None:
             try:
                 self.consumer = KafkaConsumer(
                     *topics,
-                    bootstrap_servers = self.brokers,
-                    group_id = self.group_id,
-                    value_deserializer = lambda m: json.loads(m.decode('utf-8')),
-                    auto_offset_reset = auto_offset_reset,
-                    enable_auto_commit = True,
-                    auto_commit_interval_ms = 5000
+                    bootstrap_servers=self.brokers,
+                    group_id=self.group_id,
+                    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+                    auto_offset_reset=auto_offset_reset,
+                    enable_auto_commit=True,
+                    auto_commit_interval_ms=5000,
                 )
-                logger.info(f"Kafka Consumer created for topics: {topics} | Group: {self.group_id}")
+                logger.info(
+                    f"Kafka Consumer created for topics: {topics} | Group: {self.group_id}"
+                )
             except KafkaError as e:
                 logger.error(f"Failed to create consumer: {e}")
                 raise
 
         return self.consumer
-    
-    def consume_messages(self, topics: list, callback: Callable[[Dict[str, Any]],None]):
-        """ Continuously consume messages from topics and process them """
+
+    def consume_messages(
+        self, topics: list, callback: Callable[[Dict[str, Any]], None]
+    ):
+        """Continuously consume messages from topics and process them"""
         if self.consumer is None:
             self.create_consumer
 
@@ -152,14 +166,14 @@ class KafkaService:
                     f"Partition: {message.partition} | "
                     f"Offset: {message.offset}"
                 )
-                
+
                 data = message.value
-                
+
                 try:
                     callback(data)
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
-        
+
         except KeyboardInterrupt:
             logger.info("Consumer stopped by user")
         except KafkaError as e:
@@ -167,16 +181,13 @@ class KafkaService:
         finally:
             self.close()
 
-        
     def close(self):
-        """ Gracefully shut producer & Consumer down to flush any pending msgs in producer buffer """
+        """Gracefully shut producer & Consumer down to flush any pending msgs in producer buffer"""
         if self.producer:
             self.producer.flush()
             self.producer.close()
             logger.info("Producer closed")
-        
+
         if self.consumer:
             self.consumer.close()
             logger.info("Consumer closed")
-
-

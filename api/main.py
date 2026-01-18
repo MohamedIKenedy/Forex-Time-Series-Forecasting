@@ -6,16 +6,19 @@ from routes.stream import router as stream_router
 from routes.kafka import router as kafka_router
 from routes.data import router as data_router
 
-
 app = FastAPI(
     title="Forex Time Series Forecasting API",
     description="Real-time forex price prediction and streaming API",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,8 +31,7 @@ app.include_router(stream_router, prefix="/stream", tags=["streaming"])
 app.include_router(kafka_router, prefix="/kafka", tags=["kafka"])
 app.include_router(data_router, prefix="/data", tags=["data"])
 
+
 @app.get("/")
 async def root():
     return {"message": "Forex Time Series Forecasting API is running."}
-
-

@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime as Datetime
 from typing import List
 
+
 class ForexRequest(BaseModel):
     ticker: str
     Data: Datetime
@@ -20,4 +21,4 @@ class PredictionRequest(BaseModel):
 class PredictionResponse(BaseModel):
     ticker: str
     predictions: List[float]
-    confidence: float = 0.0  
+    confidence: float = 0.0

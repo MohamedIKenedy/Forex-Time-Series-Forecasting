@@ -6,22 +6,34 @@ from scipy.stats import spearmanr
 
 
 class GBMHelper:
-    def __init__(self, params: dict = None, num_boost_round: int = 1000, early_stopping_rounds: int = 50,
-                 LOOKBACK: int = 200, HORIZON: int = 1, N_SPLITS: int = 4, TRANSACTION_COST: float = 0.0001):
-        self.params = params if params is not None else {
-            'objective': 'regression',
-            'metric': 'rmse',
-            'boosting_type': 'gbdt',
-            'learning_rate': 0.01,
-            'num_leaves': 31,
-            'max_depth': -1,
-            'min_data_in_leaf': 20,
-            'feature_fraction': 0.8,
-            'bagging_fraction': 0.8,
-            'bagging_freq': 5,
-            'verbosity': -1,
-            'seed': 42
-        }
+    def __init__(
+        self,
+        params: dict = None,
+        num_boost_round: int = 1000,
+        early_stopping_rounds: int = 50,
+        LOOKBACK: int = 200,
+        HORIZON: int = 1,
+        N_SPLITS: int = 4,
+        TRANSACTION_COST: float = 0.0001,
+    ):
+        self.params = (
+            params
+            if params is not None
+            else {
+                "objective": "regression",
+                "metric": "rmse",
+                "boosting_type": "gbdt",
+                "learning_rate": 0.01,
+                "num_leaves": 31,
+                "max_depth": -1,
+                "min_data_in_leaf": 20,
+                "feature_fraction": 0.8,
+                "bagging_fraction": 0.8,
+                "bagging_freq": 5,
+                "verbosity": -1,
+                "seed": 42,
+            }
+        )
         self.num_boost_round = num_boost_round
         self.early_stopping_rounds = early_stopping_rounds
         self.LOOKBACK = LOOKBACK
@@ -32,18 +44,24 @@ class GBMHelper:
     def create_lagged_features(self, df, lookback=200):
         """Create lagged features for time series prediction"""
         features = df.copy()
-        target = features['Close_log_return'].shift(-self.HORIZON)
+        target = features["Close_log_return"].shift(-self.HORIZON)
 
         for lag in [1, 2, 3, 5, 10, 20, 60, 120, 200]:
             if lag <= lookback:
-                features[f'close_log_return_lag_{lag}'] = features['Close_log_return'].shift(lag)
+                features[f"close_log_return_lag_{lag}"] = features[
+                    "Close_log_return"
+                ].shift(lag)
 
         for window in [5, 10, 20, 60]:
             if window <= lookback:
-                features[f'close_log_return_mean_{window}'] = features['Close_log_return'].shift(1).rolling(window).mean()
-                features[f'close_log_return_std_{window}'] = features['Close_log_return'].shift(1).rolling(window).std()
+                features[f"close_log_return_mean_{window}"] = (
+                    features["Close_log_return"].shift(1).rolling(window).mean()
+                )
+                features[f"close_log_return_std_{window}"] = (
+                    features["Close_log_return"].shift(1).rolling(window).std()
+                )
 
-        features = features.drop(columns=['Close_log_return'])
+        features = features.drop(columns=["Close_log_return"])
         valid_idx = ~(target.isna() | features.isna().any(axis=1))
         features = features[valid_idx]
         target = target[valid_idx]
@@ -60,12 +78,10 @@ class GBMHelper:
             export_path: Path to save the ONNX model
         """
         try:
-            initial_type = [('float_input', FloatTensorType([None, n_features]))]
+            initial_type = [("float_input", FloatTensorType([None, n_features]))]
 
             onnx_model = convert_lightgbm(
-                model,
-                initial_types=initial_type,
-                target_opset=12
+                model, initial_types=initial_type, target_opset=12
             )
 
             with open(export_path, "wb") as f:
@@ -135,21 +151,26 @@ def create_lagged_features(df, lookback=200):
     helper = GBMHelper()
     return helper.create_lagged_features(df, lookback)
 
+
 def export_model_to_onnx(model, n_features, export_path):
     helper = GBMHelper()
     return helper.export_model_to_onnx(model, n_features, export_path)
+
 
 def calculate_ic(predictions, actuals):
     helper = GBMHelper()
     return helper.calculate_ic(predictions, actuals)
 
+
 def calculate_directional_accuracy(predictions, actuals):
     helper = GBMHelper()
     return helper.calculate_directional_accuracy(predictions, actuals)
 
+
 def backtest_strategy(predictions, actuals, transaction_cost=0.0001):
     helper = GBMHelper()
     return helper.backtest_strategy(predictions, actuals, transaction_cost)
+
 
 def assess_performance(ic, dir_acc, sharpe):
     helper = GBMHelper()

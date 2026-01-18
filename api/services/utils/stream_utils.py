@@ -20,16 +20,18 @@ def set_ws_broadcast_loop(loop: asyncio.AbstractEventLoop):
     print(f"[WebSocket] Event loop set: {ws_broadcast_loop is not None}")
 
 
-def update_cache_and_broadcast(ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"):
+def update_cache_and_broadcast(
+    ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"
+):
     """Update cache with partitioned data and broadcast to WebSocket clients"""
-    
+
     partition_key = f"{period}_{interval}"
-    
+
     if ticker not in latest_data_cache:
         latest_data_cache[ticker] = {}
-    
+
     latest_data_cache[ticker][partition_key] = message
-    
+
     payload = {
         "type": "price_update",
         "ticker": ticker,
@@ -46,7 +48,9 @@ def update_cache_and_broadcast(ticker: str, message: Dict[str, Any], period: str
         print(f"Broadcast error for {ticker}: {e}")
 
 
-def update_cache_only(ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"):
+def update_cache_only(
+    ticker: str, message: Dict[str, Any], period: str = "1d", interval: str = "5m"
+):
     """Update the cache without broadcasting.
 
     When Kafka server-side mode is enabled, the WS broadcast should come from Kafka consumption.
@@ -102,7 +106,7 @@ def fetch_yfinance_data(ticker: str, period: str, interval: str):
     try:
         ticker_obj = yf.Ticker(ticker)
         hist = ticker_obj.history(period=period, interval=interval)
-        
+
         if hist is not None and isinstance(hist, pd.DataFrame) and not hist.empty:
             return hist
         return None
