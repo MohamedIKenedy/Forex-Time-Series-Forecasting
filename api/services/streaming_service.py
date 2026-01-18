@@ -12,7 +12,6 @@ from math import isfinite
 
 class StreamingService:
     def __init__(self):
-        # Allocate multiple partitions per topic so each ticker lands on a distinct partition via key hashing.
         self.kafka_service = KafkaService(
             brokers=config.settings.kafka_brokers, topic_partitions=16
         )
@@ -27,7 +26,6 @@ class StreamingService:
         print(f"\n[INSTANT STREAMING] Started for {len(tickers)} tickers")
         print(f"[INSTANT STREAMING] Fetching 1-minute candles every second\n")
 
-        # Remember the last candle we sent per ticker to avoid spamming identical points.
         last_sent: dict[str, tuple[str, float]] = {}
 
         def get_quote_price(ticker_obj):
@@ -35,7 +33,6 @@ class StreamingService:
                 fi = getattr(ticker_obj, "fast_info", None)
                 if not fi:
                     return None
-                # fast_info can be dict-like or object; prefer last_price, fallback to regularMarketPrice keys.
                 for key in ["last_price", "regularMarketPrice", "lastPrice"]:
                     if hasattr(fi, key):
                         val = getattr(fi, key)
@@ -57,7 +54,6 @@ class StreamingService:
                 try:
                     ticker_obj = yf.Ticker(ticker)
 
-                    # Keep a stable candle resolution for the UI.
                     # For "instant" mode we always target 1-minute candles for the last day.
                     data = None
                     used_period = "1d"

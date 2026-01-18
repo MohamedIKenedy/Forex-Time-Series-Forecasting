@@ -116,7 +116,6 @@ class KafkaService:
 
             metadata = future.get(timeout=10)
 
-            # Downgraded to debug to reduce log noise in instant mode.
             logger.debug(
                 f"Message sent to {topic} | "
                 f"Partition: {metadata.partition} | "

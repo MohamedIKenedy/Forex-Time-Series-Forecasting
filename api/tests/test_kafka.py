@@ -85,7 +85,7 @@ def test_producer_consumer_concurrent():
     print("TEST 2: Concurrent Producer-Consumer")
     print("=" * 60 + "\n")
 
-    received_count = [0]  # Use list to modify in nested function
+    received_count = [0] 
 
     def producer_job():
         """Producer runs in separate thread"""
