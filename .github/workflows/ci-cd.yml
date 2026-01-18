@@ -144,6 +144,7 @@ jobs:
         host: ${{ needs.infra.outputs.public_ip }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
+        passphrase: ${{ secrets.EC2_KEY_PASSPHRASE }}
         script: |
           cd /home/ubuntu/forex-app  # Adjust path as needed
           export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
