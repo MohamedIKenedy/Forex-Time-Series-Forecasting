@@ -38,7 +38,6 @@ def update_cache_and_broadcast(ticker: str, message: Dict[str, Any], period: str
         "partition": partition_key,
     }
 
-    global ws_broadcast_loop
     if ws_broadcast_loop is None:
         print(f"[WebSocket] No broadcast loop available for {ticker}")
         return

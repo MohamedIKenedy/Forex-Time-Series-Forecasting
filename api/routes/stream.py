@@ -97,7 +97,6 @@ async def start_instant_streaming():
 
 @router.post("/stop_streaming")
 async def stop_streaming():
-    global streaming_service_instance, streaming_thread
     
     _stop_kafka_bridge()
 
