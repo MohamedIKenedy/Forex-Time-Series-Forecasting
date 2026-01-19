@@ -120,12 +120,10 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
-        # Simple direct output capture
-        {
-          echo -n "public_ip="
-          terraform output -raw public_ip 2>/dev/null || echo -n "13.38.119.160"
-        } >> $GITHUB_OUTPUT
-        echo "" >> $GITHUB_OUTPUT
+        terraform output -raw public_ip > /tmp/ip.txt 2>/dev/null || echo "13.38.119.160" > /tmp/ip.txt
+        PUBLIC_IP=$(cat /tmp/ip.txt | xargs)
+        echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
+        echo "✓ Public IP: ${PUBLIC_IP}"
 
   deploy:
     runs-on: ubuntu-latest
