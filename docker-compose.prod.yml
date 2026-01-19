@@ -1,6 +1,6 @@
 services:
   zookeeper:
-    image: bitnami/zookeeper:3.9
+    image: bitnami/zookeeper:latest
     container_name: forex-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -9,7 +9,7 @@ services:
       - "2181:2181"
 
   kafka:
-    image: bitnami/kafka:3.9
+    image: bitnami/kafka:latest
     container_name: forex-kafka
     depends_on:
       - zookeeper
