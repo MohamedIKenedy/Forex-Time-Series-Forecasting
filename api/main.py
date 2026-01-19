@@ -8,7 +8,7 @@ from routes.data import router as data_router
 import os
 
 # Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 app = FastAPI(
     title="Forex Time Series Forecasting API",
