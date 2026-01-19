@@ -84,7 +84,7 @@ jobs:
   infra:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Deployment-Branch'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/Deployment-Branch'
     outputs:
       public_ip: ${{ steps.tfapply.outputs.public_ip }}
 
@@ -126,6 +126,21 @@ jobs:
         echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
         echo "✓ Public IP: ${PUBLIC_IP}"
 
+    - name: Wait for EC2 instance to be ready
+      run: |
+        echo "Waiting for EC2 instance to initialize..."
+        sleep 60
+        echo "Checking SSH connectivity..."
+        for i in {1..10}; do
+          if nc -zv ${{ steps.tfapply.outputs.public_ip }} 22 2>&1 | grep -q succeeded; then
+            echo "✓ SSH is ready"
+            exit 0
+          fi
+          echo "Attempt $i: SSH not ready yet, waiting..."
+          sleep 10
+        done
+        echo "Warning: SSH may not be fully ready"
+
   deploy:
     runs-on: ubuntu-latest
     needs: [docker, infra]
@@ -135,19 +150,38 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Deploy to AWS EC2
-      uses: appleboy/ssh-action@v0.1.10
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        host: ${{ needs.infra.outputs.public_ip }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        passphrase: ${{ secrets.EC2_KEY_PASSPHRASE }}
-        script: |
-          cd /home/ubuntu/forex-app  # Adjust path as needed
-          export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Get EC2 Instance ID
+      id: get_instance
+      run: |
+        INSTANCE_ID=$(aws ec2 describe-instances \
+          --filters "Name=ip-address,Values=${{ needs.infra.outputs.public_ip }}" "Name=instance-state-name,Values=running" \
+          --query "Reservations[0].Instances[0].InstanceId" \
+          --output text)
+        echo "instance_id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
+        echo "Found instance: ${INSTANCE_ID}"
+
+    - name: Deploy via AWS SSM (Secure - No SSH Port Open)
+      run: |
+        aws ssm send-command \
+          --instance-ids ${{ steps.get_instance.outputs.instance_id }} \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy Forex App" \
+          --parameters 'commands=[
+            "cd /home/ubuntu/forex-app",
+            "git pull origin main || git pull origin Deployment-Branch",
+            "export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}",
+            "docker-compose -f docker-compose.prod.yml down",
+            "docker-compose -f docker-compose.prod.yml pull",
+            "docker-compose -f docker-compose.prod.yml up -d"
+          ]' \
+          --output text
 
   docker:
     runs-on: ubuntu-latest

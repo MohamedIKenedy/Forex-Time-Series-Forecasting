@@ -25,7 +25,7 @@ resource "aws_security_group" "forex_sg" {
   description = "Security group for forex app"
 
   ingress {
-    description = "SSH from my IP"
+    description = "SSH from my IP only"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -56,11 +56,38 @@ resource "aws_security_group" "forex_sg" {
   }
 }
 
+# IAM role for SSM access
+resource "aws_iam_role" "ssm_role" {
+  name = "${var.name}-ssm-role-${random_id.suffix.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm_profile" {
+  name = "${var.name}-ssm-profile-${random_id.suffix.hex}"
+  role = aws_iam_role.ssm_role.name
+}
+
 resource "aws_instance" "forex" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.forex_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
 
   user_data = <<-EOF
               #!/bin/bash
