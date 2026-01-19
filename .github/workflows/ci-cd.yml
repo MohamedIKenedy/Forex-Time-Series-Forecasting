@@ -245,6 +245,12 @@ jobs:
             exit 1
           fi
 
+    - name: Output application URL
+      run: |
+        echo "🎉 Deployment successful!"
+        echo "Application is accessible at: http://${{ needs.infra.outputs.public_ip }}:8000"
+        echo "Health check endpoint: http://${{ needs.infra.outputs.public_ip }}:8000/health"
+
     - name: Remove temporary SSH access
       if: always() && steps.add_rule.outputs.rule_id != 'exists'
       run: |
