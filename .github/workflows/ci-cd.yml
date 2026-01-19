@@ -122,12 +122,34 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
-        PUBLIC_IP=$(terraform output -raw public_ip)
-        SG_ID=$(terraform output -raw security_group_id)
+        
+        # Capture outputs
+        PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null)
+        SG_ID=$(terraform output -raw security_group_id 2>/dev/null)
+        
+        # Validate outputs
+        if [ -z "$PUBLIC_IP" ] || [ -z "$SG_ID" ]; then
+          echo "❌ Failed to get Terraform outputs"
+          echo "PUBLIC_IP: $PUBLIC_IP"
+          echo "SG_ID: $SG_ID"
+          exit 1
+        fi
+        
         echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
         echo "security_group_id=${SG_ID}" >> $GITHUB_OUTPUT
         echo "✓ Public IP: ${PUBLIC_IP}"
         echo "✓ Security Group: ${SG_ID}"
+
+    - name: Validate Terraform Outputs
+      run: |
+        if [ -z "${{ steps.tfapply.outputs.public_ip }}" ] || [ -z "${{ steps.tfapply.outputs.security_group_id }}" ]; then
+          echo "❌ ERROR: Terraform outputs are missing"
+          echo "Public IP: ${{ steps.tfapply.outputs.public_ip }}"
+          echo "Security Group ID: ${{ steps.tfapply.outputs.security_group_id }}"
+          echo "Please check Terraform Apply step for errors"
+          exit 1
+        fi
+        echo "✓ All Terraform outputs present"
 
     - name: Wait for EC2 instance to be ready
       run: |
