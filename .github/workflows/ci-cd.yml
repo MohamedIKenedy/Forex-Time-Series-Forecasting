@@ -115,25 +115,21 @@ jobs:
     - name: Terraform Apply
       id: tfapply
       working-directory: infrastructure
-      continue-on-error: true
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        TF_LOG: DEBUG
       run: |
+        echo "🔍 Starting Terraform Apply..."
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
         
-        # Capture outputs
-        PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null)
-        SG_ID=$(terraform output -raw security_group_id 2>/dev/null)
+        echo "📊 Capturing Terraform outputs..."
+        terraform output -json > /tmp/outputs.json
+        cat /tmp/outputs.json
         
-        # Validate outputs
-        if [ -z "$PUBLIC_IP" ] || [ -z "$SG_ID" ]; then
-          echo "❌ Failed to get Terraform outputs"
-          echo "PUBLIC_IP: $PUBLIC_IP"
-          echo "SG_ID: $SG_ID"
-          exit 1
-        fi
+        PUBLIC_IP=$(terraform output -raw public_ip)
+        SG_ID=$(terraform output -raw security_group_id)
         
         echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
         echo "security_group_id=${SG_ID}" >> $GITHUB_OUTPUT
