@@ -87,6 +87,7 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/Deployment-Branch'
     outputs:
       public_ip: ${{ steps.tfapply.outputs.public_ip }}
+      security_group_id: ${{ steps.tfapply.outputs.security_group_id }}
 
     steps:
     - name: Checkout
@@ -121,10 +122,12 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
       run: |
         terraform apply -auto-approve -var "public_key_path=../deploy.pub" -var "my_ip_cidr=${{ secrets.MY_IP_CIDR }}"
-        terraform output -raw public_ip > /tmp/ip.txt 2>/dev/null || echo "13.38.119.160" > /tmp/ip.txt
-        PUBLIC_IP=$(cat /tmp/ip.txt | xargs)
+        PUBLIC_IP=$(terraform output -raw public_ip)
+        SG_ID=$(terraform output -raw security_group_id)
         echo "public_ip=${PUBLIC_IP}" >> $GITHUB_OUTPUT
+        echo "security_group_id=${SG_ID}" >> $GITHUB_OUTPUT
         echo "✓ Public IP: ${PUBLIC_IP}"
+        echo "✓ Security Group: ${SG_ID}"
 
     - name: Wait for EC2 instance to be ready
       run: |
@@ -157,31 +160,65 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Get EC2 Instance ID
-      id: get_instance
+    - name: Get GitHub Actions runner IP
+      id: runner_ip
       run: |
-        INSTANCE_ID=$(aws ec2 describe-instances \
-          --filters "Name=ip-address,Values=${{ needs.infra.outputs.public_ip }}" "Name=instance-state-name,Values=running" \
-          --query "Reservations[0].Instances[0].InstanceId" \
-          --output text)
-        echo "instance_id=${INSTANCE_ID}" >> $GITHUB_OUTPUT
-        echo "Found instance: ${INSTANCE_ID}"
+        RUNNER_IP=$(curl -s https://api.ipify.org)
+        echo "ip=${RUNNER_IP}" >> $GITHUB_OUTPUT
+        echo "📍 Runner IP: ${RUNNER_IP}"
 
-    - name: Deploy via AWS SSM (Secure - No SSH Port Open)
+    - name: Temporarily allow SSH from runner IP
+      id: add_rule
       run: |
-        aws ssm send-command \
-          --instance-ids ${{ steps.get_instance.outputs.instance_id }} \
-          --document-name "AWS-RunShellScript" \
-          --comment "Deploy Forex App" \
-          --parameters 'commands=[
-            "cd /home/ubuntu/forex-app",
-            "git pull origin main || git pull origin Deployment-Branch",
-            "export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}",
-            "docker-compose -f docker-compose.prod.yml down",
-            "docker-compose -f docker-compose.prod.yml pull",
-            "docker-compose -f docker-compose.prod.yml up -d"
-          ]' \
-          --output text
+        echo "Security Group ID: ${{ needs.infra.outputs.security_group_id }}"
+        echo "Runner IP: ${{ steps.runner_ip.outputs.ip }}"
+        RULE_ID=$(aws ec2 authorize-security-group-ingress \
+          --group-id ${{ needs.infra.outputs.security_group_id }} \
+          --protocol tcp \
+          --port 22 \
+          --cidr ${{ steps.runner_ip.outputs.ip }}/32 \
+          --output text \
+          --query 'SecurityGroupRules[0].SecurityGroupRuleId' 2>&1 || echo "exists")
+        echo "rule_id=${RULE_ID}" >> $GITHUB_OUTPUT
+        echo "✓ Temporarily opened SSH for this runner"
+        sleep 5
+
+    - name: Wait for instance SSH readiness
+      run: |
+        echo "Waiting for SSH to be ready..."
+        for i in {1..12}; do
+          if nc -zv ${{ needs.infra.outputs.public_ip }} 22 2>&1 | grep -q succeeded; then
+            echo "✓ SSH is ready"
+            exit 0
+          fi
+          echo "Attempt $i/12: Waiting..."
+          sleep 10
+        done
+
+    - name: Deploy to AWS EC2
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ needs.infra.outputs.public_ip }}
+        username: ubuntu
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        passphrase: ${{ secrets.EC2_KEY_PASSPHRASE }}
+        timeout: 60s
+        command_timeout: 15m
+        script: |
+          cd /home/ubuntu/forex-app
+          git pull origin Deployment-Branch || git pull origin main
+          export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
+          docker-compose -f docker-compose.prod.yml down || true
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
+
+    - name: Remove temporary SSH access
+      if: always() && steps.add_rule.outputs.rule_id != 'exists'
+      run: |
+        aws ec2 revoke-security-group-ingress \
+          --group-id ${{ needs.infra.outputs.security_group_id }} \
+          --security-group-rule-ids ${{ steps.add_rule.outputs.rule_id }} || true
+        echo "✓ Removed temporary SSH rule"
 
   docker:
     runs-on: ubuntu-latest

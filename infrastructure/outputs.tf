@@ -9,3 +9,7 @@ output "security_group_id" {
 output "instance_id" {
   value = aws_instance.forex.id
 }
+
+output "instance_ready" {
+  value = "Wait 60s after apply for instance initialization"
+}
