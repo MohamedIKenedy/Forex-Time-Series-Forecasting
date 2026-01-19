@@ -10,7 +10,7 @@ variable "name" {
 
 variable "instance_type" {
   type    = string
-  default = "t3.small"  # Increased from t3.micro for more storage (16GB vs 8GB)
+  default = "t3.medium"  # Increased from t3.small for much more storage (40GB vs 16GB)
 }
 
 variable "key_name" {
