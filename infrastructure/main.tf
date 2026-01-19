@@ -62,34 +62,41 @@ resource "aws_instance" "forex" {
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.forex_sg.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              set -e
-              apt-get update -y
-              apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release git
-              
-              # Install Docker
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              sh get-docker.sh
-              usermod -aG docker ubuntu
-              
-              # Install Docker Compose v2
-              mkdir -p /usr/local/lib/docker/cli-plugins
-              curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
-              chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-              ln -sf /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
-              
-              # Enable and start Docker
-              systemctl enable docker
-              systemctl start docker
-              sleep 10
-              
-              # Clone repo as ubuntu user to avoid ownership issues
-              su - ubuntu -c 'git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git /home/ubuntu/forex-app' || true
-              
-              # Fix permissions just in case
-              chown -R ubuntu:ubuntu /home/ubuntu/forex-app || true
-              EOF
+  user_data = base64encode(<<-EOF
+#!/bin/bash
+set -ex
+
+# Update packages
+apt-get update -y
+apt-get upgrade -y
+apt-get install -y curl git wget
+
+# Install Docker from official repo
+curl -fsSL https://get.docker.com -o get-docker.sh
+bash get-docker.sh
+usermod -aG docker ubuntu
+rm get-docker.sh
+
+# Install Docker Compose v2 via curl
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Start Docker
+systemctl enable docker
+systemctl start docker
+sleep 15
+
+# Clone repo as ubuntu user
+sudo -u ubuntu git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git /home/ubuntu/forex-app 2>/dev/null || true
+
+# Fix permissions
+chown -R ubuntu:ubuntu /home/ubuntu/forex-app
+
+# Log completion
+echo "Infrastructure initialization complete" > /var/log/user-data.log
+EOF
+  )
 
   tags = {
     Name = "${var.name}-instance-${random_id.suffix.hex}"
