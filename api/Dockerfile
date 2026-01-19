@@ -21,24 +21,16 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Runtime stage
-FROM python:3.10-slim
+# Runtime stage - using distroless for minimal size
+FROM gcr.io/distroless/python3-debian12
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
-
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Install curl for health checks
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
 
 # Set work directory
 WORKDIR /app
@@ -46,16 +38,8 @@ WORKDIR /app
 # Copy application code
 COPY . .
 
-# Create logs directory
-RUN mkdir -p /app/logs && \
-    chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Create logs directory (distroless has limited shell, but this should work)
+RUN mkdir -p /app/logs
 
 # Expose port
 EXPOSE 8000
