@@ -203,11 +203,17 @@ jobs:
         script: |
           cd /home/ubuntu/forex-app
           git config --global --add safe.directory /home/ubuntu/forex-app
-          git pull origin Deployment-Branch || git pull origin main
+          git fetch origin
+          git reset --hard origin/Deployment-Branch || git reset --hard origin/main
           export DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
-          /usr/local/bin/docker-compose -f docker-compose.prod.yml down || true
-          /usr/local/bin/docker-compose -f docker-compose.prod.yml pull
-          /usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
+          which docker-compose || echo "docker-compose not found, installing..."
+          if ! command -v docker-compose &> /dev/null; then
+            curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+          fi
+          docker-compose -f docker-compose.prod.yml down || true
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
 
     - name: Remove temporary SSH access
       if: always() && steps.add_rule.outputs.rule_id != 'exists'
