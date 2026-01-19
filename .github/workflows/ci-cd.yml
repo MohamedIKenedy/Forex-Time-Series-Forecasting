@@ -248,7 +248,8 @@ jobs:
     - name: Output application URL
       run: |
         echo "🎉 Deployment successful!"
-        echo "Application is accessible at: http://${{ needs.infra.outputs.public_ip }}:8000"
+        echo "API is accessible at: http://${{ needs.infra.outputs.public_ip }}:8000"
+        echo "Frontend is accessible at: http://${{ needs.infra.outputs.public_ip }}:5173"
         echo "Health check endpoint: http://${{ needs.infra.outputs.public_ip }}:8000/health"
 
     - name: Remove temporary SSH access
