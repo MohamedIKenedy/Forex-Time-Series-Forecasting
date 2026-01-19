@@ -213,26 +213,37 @@ jobs:
           fi
           docker-compose -f docker-compose.prod.yml down || true
           
-          echo "🔍 Checking available disk space..."
+          echo " Checking available disk space..."
           AVAILABLE_GB=$(df / | tail -1 | awk '{print int($4/1024/1024)}')
-          echo "💾 Available disk space: ${AVAILABLE_GB}GB"
+          echo " Available disk space: ${AVAILABLE_GB}GB"
           
           if ! docker-compose -f docker-compose.prod.yml pull; then
-            echo "❌ Insufficient disk space on EC2 instance for Docker images"
-            echo "💡 Pipeline completed successfully, but deployment skipped due to storage constraints"
-            echo "🔧 Consider upgrading EC2 instance type or optimizing Docker image sizes"
-            echo "📊 Current available space: ${AVAILABLE_GB}GB"
+            echo " Insufficient disk space on EC2 instance for Docker images"
+            echo " Pipeline completed successfully, but deployment skipped due to storage constraints"
+            echo " Consider upgrading EC2 instance type or optimizing Docker image sizes"
+            echo " Current available space: ${AVAILABLE_GB}GB"
             exit 0
           fi
           
           if ! docker-compose -f docker-compose.prod.yml up -d; then
-            echo "❌ Failed to start containers (possibly due to storage issues)"
-            echo "💡 Pipeline completed successfully, but containers may not be running"
-            echo "🔧 Check EC2 instance logs and storage"
+            echo " Failed to start containers (possibly due to storage issues)"
+            echo " Pipeline completed successfully, but containers may not be running"
+            echo " Check EC2 instance logs and storage"
             exit 0
           fi
           
-          echo "✅ Deployment completed successfully"
+          echo " Deployment completed successfully"
+          
+          echo " Waiting for application to start..."
+          sleep 30
+          if curl -f --max-time 10 http://localhost:8000/health; then
+            echo "✓ Application is healthy and responding"
+          else
+            echo "✗ Health check failed. Checking container logs:"
+            docker-compose logs api
+            echo " Application may not be starting properly. Check the logs above."
+            exit 1
+          fi
 
     - name: Remove temporary SSH access
       if: always() && steps.add_rule.outputs.rule_id != 'exists'
