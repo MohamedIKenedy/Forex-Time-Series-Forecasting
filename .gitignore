@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+
 # Distribution / packaging
 .Python
 build/
@@ -226,3 +232,7 @@ crash.log
 override.tf
 override.tf.json
 *_override.tf
+.terraform/
+__pycache__/
+*.pyc
+.terraform.lock.hcl
