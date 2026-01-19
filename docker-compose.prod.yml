@@ -1,6 +1,6 @@
 services:
   zookeeper:
-    image: bitnami/zookeeper:latest
+    image: apache/zookeeper:latest
     container_name: forex-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -9,7 +9,7 @@ services:
       - "2181:2181"
 
   kafka:
-    image: bitnami/kafka:latest
+    image: apache/kafka:latest
     container_name: forex-kafka
     depends_on:
       - zookeeper
@@ -23,7 +23,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-      ALLOW_PLAINTEXT_LISTENER: 'yes'
 
   api:
     image: ${DOCKER_HUB_USERNAME}/forex-api:latest
