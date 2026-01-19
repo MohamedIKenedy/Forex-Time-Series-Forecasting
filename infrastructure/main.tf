@@ -67,19 +67,28 @@ resource "aws_instance" "forex" {
               set -e
               apt-get update -y
               apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release git
+              
+              # Install Docker
               curl -fsSL https://get.docker.com -o get-docker.sh
               sh get-docker.sh
-              usermod -aG docker ubuntu || true
-              mkdir -p /home/ubuntu/.docker/cli-plugins || true
-              curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose || true
-              chmod +x /usr/local/lib/docker/cli-plugins/docker-compose || true
-              ln -s /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
-              systemctl enable docker || true
-              systemctl start docker || true
-              # Clone repo (if public); adjust for private repos
-              if [ ! -d /home/ubuntu/forex-app ]; then
-                git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git /home/ubuntu/forex-app || true
-              fi
+              usermod -aG docker ubuntu
+              
+              # Install Docker Compose v2
+              mkdir -p /usr/local/lib/docker/cli-plugins
+              curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+              chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+              ln -sf /usr/local/lib/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+              
+              # Enable and start Docker
+              systemctl enable docker
+              systemctl start docker
+              sleep 10
+              
+              # Clone repo as ubuntu user to avoid ownership issues
+              su - ubuntu -c 'git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git /home/ubuntu/forex-app' || true
+              
+              # Fix permissions just in case
+              chown -R ubuntu:ubuntu /home/ubuntu/forex-app || true
               EOF
 
   tags = {
