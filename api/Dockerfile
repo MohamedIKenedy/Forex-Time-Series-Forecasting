@@ -38,8 +38,8 @@ WORKDIR /app
 # Copy application code
 COPY . .
 
-# Create logs directory (distroless has limited shell, but this should work)
-RUN mkdir -p /app/logs
+# Note: logs directory will be created by the application at runtime
+# Distroless images don't support shell commands like mkdir
 
 # Expose port
 EXPOSE 8000
