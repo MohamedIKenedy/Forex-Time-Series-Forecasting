@@ -148,7 +148,7 @@ Use the frontend at `ui/forex-dash/` (already served via docker-compose) or conn
 
 Watch the system in action:
 
-[![Forex MLOps Pipeline Demo](images/demo_video.mp4)](images/Forex_NomadM_REC.mp4)
+[![Forex MLOps Pipeline Demo](images/Forex_NomadM_REC.mp4)](images/Forex_NomadM_REC.mp4)
 
 *Click to view the demo video*
 
