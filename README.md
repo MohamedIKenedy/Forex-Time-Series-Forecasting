@@ -148,9 +148,16 @@ Use the frontend at `ui/forex-dash/` (already served via docker-compose) or conn
 
 Watch the system in action:
 
-[![Forex MLOps Pipeline Demo](images/Forex_NomadM_REC.mp4)](images/Forex_NomadM_REC.mp4)
+https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting/assets/YOUR_USER_ID/YOUR_ASSET_ID
 
-*Click to view the demo video*
+**To add the video:**
+1. Create a new issue in your repository
+2. Drag and drop `images/Forex_NomadM_REC.mp4` into the issue comment box
+3. GitHub will upload it and generate a permanent URL like: `https://github.com/user-attachments/assets/...`
+4. Copy that URL and replace the placeholder above
+5. You can then close the issue without posting it
+
+Alternatively, download the video here: [Forex_NomadM_REC.mp4](images/Forex_NomadM_REC.mp4)
 
 **What the demo covers:**
 - Starting the streaming pipeline and connecting to WebSocket
