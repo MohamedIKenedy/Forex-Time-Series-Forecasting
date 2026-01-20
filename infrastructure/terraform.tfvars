@@ -1,5 +1,5 @@
 aws_region       = "eu-west-3"
 ami_id           = "ami-0c73f2f84f9def529"
 key_name         = "forex-deploy"
-public_key_path  = "C:/Users/Karim/.ssh/forex_deploy.pub"
+public_key_path  = "YOUR_PATH/forex_deploy.pub"
 instance_type    = "t3.small"
