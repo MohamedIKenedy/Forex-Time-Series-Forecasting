@@ -1,4 +1,4 @@
-Infrastructure README
+## Quick Start
 
 Purpose
 - Quick instructions to create an EC2 instance using Terraform and AWS.
