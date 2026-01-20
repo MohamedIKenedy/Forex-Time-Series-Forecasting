@@ -148,17 +148,7 @@ Use the frontend at `ui/forex-dash/` (already served via docker-compose) or conn
 
 Watch the system in action:
 
-https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting/assets/YOUR_USER_ID/YOUR_ASSET_ID
-
-**To add the video:**
-1. Create a new issue in your repository
-2. Drag and drop `images/Forex_NomadM_REC.mp4` into the issue comment box
-3. GitHub will upload it and generate a permanent URL like: `https://github.com/user-attachments/assets/...`
-4. Copy that URL and replace the placeholder above
-5. You can then close the issue without posting it
-
-Alternatively, download the video here: [Forex_NomadM_REC.mp4](images/Forex_NomadM_REC.mp4)
-
+[![App Demo](images/Main_Console.png)](https://youtu.be/j9E-c5DrYDQ)
 **What the demo covers:**
 - Starting the streaming pipeline and connecting to WebSocket
 - Real-time price updates flowing through Kafka to the web dashboard
