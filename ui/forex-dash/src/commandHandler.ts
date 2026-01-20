@@ -382,11 +382,11 @@ Lookback sets how many recent records are used (default 200).`,
       'Kafka commands:\n' +
       '  kafka diagram              - Show architecture diagram\n' +
       '  kafka health               - Check broker connectivity\n' +
-      '  kafka topics [prefix]      - List topics (optionally filter by prefix)\n' +
+      '  kafka topics [prefix]      - List topics with partition counts\n' +
       '\nExamples:\n' +
-      '  kafka topics\n' +
-      '  kafka topics instant_\n' +
-      '  kafka health\n';
+      '  kafka topics               # show all topics\n' +
+      '  kafka topics instant_      # filter topics by prefix\n' +
+      '  kafka health               # check broker status\n';
 
     try {
       if (sub === 'help') {
@@ -404,7 +404,12 @@ Lookback sets how many recent records are used (default 200).`,
 
       if (sub === 'health') {
         const data = await getKafkaHealth();
-        const content = `Kafka Health\nOK: ${data?.ok ?? false}\nBrokers: ${(data?.brokers || []).join(', ') || 'n/a'}\nTopics: ${data?.topics_count ?? 'n/a'}`;
+        const brokers = Array.isArray(data?.brokers)
+          ? data.brokers.join(', ')
+          : typeof data?.brokers === 'string'
+          ? data.brokers
+          : 'n/a';
+        const content = `Kafka Health\nOK: ${data?.ok ?? false}\nBrokers: ${brokers}\nTopics: ${data?.topics_count ?? 'n/a'}`;
         return {
           id: this.generateId(),
           content,
@@ -416,6 +421,12 @@ Lookback sets how many recent records are used (default 200).`,
         const prefix = args[1];
         const data = await getKafkaTopics(prefix);
         const topics = Array.isArray(data?.topics) ? data.topics : [];
+
+        const brokers = Array.isArray(data?.brokers)
+          ? data.brokers.join(', ')
+          : typeof data?.brokers === 'string'
+          ? data.brokers
+          : 'n/a';
 
         const col1 = 46;
         const col2 = 10;
@@ -429,7 +440,8 @@ Lookback sets how many recent records are used (default 200).`,
           })
           .join('\n');
 
-        const meta = `Brokers: ${(data?.brokers || []).join(', ') || 'n/a'}\nTopics: ${topics.length}${prefix ? ` (prefix=${prefix})` : ''}`;
+        const totalPartitions = topics.reduce((sum: number, t: any) => sum + (t.partitions ?? 0), 0);
+        const meta = `Brokers: ${brokers}\nTopics: ${topics.length}${prefix ? ` (prefix=${prefix})` : ''}\nTotal Partitions: ${totalPartitions}`;
 
         return {
           id: this.generateId(),

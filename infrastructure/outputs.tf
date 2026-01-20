@@ -1,15 +1,9 @@
-output "public_ip" {
-  value = aws_instance.forex.public_ip
+output "ec2_public_ip" {
+  description = "Public IP of the EC2 instance"
+  value       = aws_instance.forex_ec2.public_ip
 }
 
-output "security_group_id" {
-  value = aws_security_group.forex_sg.id
-}
-
-output "instance_id" {
-  value = aws_instance.forex.id
-}
-
-output "instance_ready" {
-  value = "Wait 60s after apply for instance initialization"
+output "ssh_command" {
+  description = "Command to SSH into the EC2 instance"
+  value       = "ssh -i C:/Users/Karim/.ssh/forex_deploy ec2-user@${aws_instance.forex_ec2.public_ip}"
 }
