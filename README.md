@@ -1,6 +1,5 @@
 # Forex Time Series Forecasting — Production MLOps Pipeline
 
-
 ![Console screenshot](images/Main_Console.png)
 
 This repository implements a complete, production-oriented MLOps pipeline for foreign exchange (FX) rate forecasting. It bridges offline model training (data → features → tuning → serving) with a real-time streaming architecture (yfinance → Kafka → WebSocket). The system tracks experiments via MLflow, serves models via ONNX and FastAPI, and scales horizontally using Kafka for durable, partitioned message passing.
@@ -101,7 +100,7 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 | **Experiment Tracking** | MLflow                             |
 | **Model Serving**       | ONNX Runtime                       |
 | **Containerization**    | Docker, docker-compose             |
-| **CI/CD**               | Jenkins, PyTest(For testing)       |
+| **CI/CD**               | Jenkins, PyTest (for testing)      |
 
 ## Quick Start
 
@@ -114,11 +113,7 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 
 ```bash
 git clone https://github.com/MohamedIKenedy/Forex-Time-Series-Forecasting.git
-<<<<<<< HEAD
 cd Forex-Time-Series-Forecasting
-=======
-cd forex-time-series-forecasting
->>>>>>> 14afb3f24933d4693e2c002dd1dad669279815da
 ```
 
 ### 2. Start the Full Stack (Docker Compose)
@@ -130,7 +125,7 @@ docker-compose up -d
 This starts:
 - **FastAPI** (http://localhost:8000) with WebSocket support
 - **Kafka** (localhost:9092) for message streaming
-- **MLflow** (http://localhost:5000) for experiment tracking by running mlflow ui --port 5000 --host 0.0.0.0
+- **MLflow** (http://localhost:5000) for experiment tracking by running `mlflow ui --port 5000 --host 0.0.0.0`
 
 ### 3. Access Dashboards
 
@@ -148,6 +143,21 @@ curl -X POST http://localhost:8000/stream/start_instant_streaming \
 ### 5. Open WebSocket Client
 
 Use the frontend at `ui/forex-dash/` (already served via docker-compose) or connect to `ws://localhost:8000/stream/ws` from a client.
+
+## Demo Video
+
+Watch the system in action:
+
+[![Forex MLOps Pipeline Demo](images/demo_video.mp4)](images/Forex_NomadM_REC.mp4)
+
+*Click to view the demo video*
+
+**What the demo covers:**
+- Starting the streaming pipeline and connecting to WebSocket
+- Real-time price updates flowing through Kafka to the web dashboard
+- Running model inference and viewing predictions
+- Exploring MLflow experiment tracking and comparing model runs
+- Monitoring system health and Kafka topic metrics
 
 ## Local Development (Without Docker)
 
@@ -174,6 +184,7 @@ cd Notebooks
 jupyter notebook forex_forecasting.ipynb
 # or
 python -m jupyter lab
+```
 
 ## Configuration
 
@@ -195,7 +206,6 @@ MLFLOW_TRACKING_URI=http://localhost:5000
 # API
 API_HOST=0.0.0.0
 API_PORT=8000
-
 ```
 
 ## Common Tasks
@@ -241,8 +251,6 @@ Navigate to http://localhost:5000 → click on a run → view metrics, parameter
 - **Health Check:** `curl http://localhost:8000/health`
 - **Kafka Status:** Monitor via Kafka admin tools (e.g., `kafka-topics.sh`, `kafka-consumer-groups.sh`)
 
-
-
 ## Contributing
 
 1. Fork the repository
@@ -262,6 +270,3 @@ This system is for research and educational purposes. Do **not** use for live tr
 ---
 
 **For questions or issues**, open a GitHub issue or reach out via the project repository.
-#   T e s t   d e p l o y m e n t   a f t e r   s e c u r i t y   g r o u p   u p d a t e 
- 
- 
