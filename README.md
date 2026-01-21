@@ -91,16 +91,17 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 
 ## Tech Stack
 
-|         Layer           |          Technology                |
-|-------------------------|------------------------------------|
-| **Web & Async**         | FastAPI, Uvicorn, asyncio          |
-| **Data & ETL**          | pandas, numpy, yfinance            |
-| **Streaming**           | Kafka (kafka-python), Redis        |
-| **ML Training**         | GBM, scikit-learn, Torch, Ray Tune |
-| **Experiment Tracking** | MLflow                             |
-| **Model Serving**       | ONNX Runtime                       |
-| **Containerization**    | Docker, docker-compose             |
-| **CI/CD**               | Jenkins, PyTest (for testing)      |
+|         Layer           |          Technology                  |
+|-------------------------|--------------------------------------|
+| **Web & Async**         | FastAPI, Uvicorn, asyncio, React ts  |
+| **Data & ETL**          | pandas, numpy, yfinance, Postgres,   |
+|                         |           Spark, AWS S3              |
+| **Streaming**           | Kafka (kafka-python), Redis          |
+| **ML Training**         | GBM, scikit-learn, Torch, Ray Tune   |
+| **Experiment Tracking** | MLflow                               |
+| **Model Serving**       | ONNX Runtime                         |
+| **Containerization**    | Docker, docker-compose               |
+| **CI/CD**               | Github Actions, PyTest (for testing) |
 
 ## Quick Start
 
