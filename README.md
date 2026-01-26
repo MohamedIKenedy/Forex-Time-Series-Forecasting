@@ -150,6 +150,7 @@ Use the frontend at `ui/forex-dash/` (already served via docker-compose) or conn
 Watch the system in action:
 
 [![App Demo](images/Main_Console.png)](https://youtu.be/j9E-c5DrYDQ)
+https://github.com/user-attachments/assets/29c56266-349c-494f-9954-a5bb4811b85f
 **What the demo covers:**
 - Starting the streaming pipeline and connecting to WebSocket
 - Real-time price updates flowing through Kafka to the web dashboard
