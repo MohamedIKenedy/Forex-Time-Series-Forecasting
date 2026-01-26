@@ -10,7 +10,7 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 
 **Offline Training & Experimentation:**
 - Fetches historical FX candles from Yahoo Finance for 10+ currency pairs
-- Engineers 200+ features (lagged returns, rolling statistics, cross-ticker correlations) with zero data leakage
+- Engineers robust features (lagged returns, rolling statistics, cross-ticker correlations) with zero data leakage
 - Tunes gradient boosting models using Ray Tune (distributed hyperparameter search) and logs all runs to MLflow
 - Exports trained models as ONNX for portable, efficient serving
 - Evaluates using proper time-series cross-validation (no forward-looking information leaks)
@@ -96,7 +96,7 @@ This repository implements a complete, production-oriented MLOps pipeline for fo
 | **Web & Async**         | FastAPI, Uvicorn, asyncio, React ts  |
 | **Data & ETL**          | pandas, numpy, yfinance, Postgres,   |
 |                         |           Spark, AWS S3              |
-| **Streaming**           | Kafka (kafka-python), Redis          |
+| **Streaming**           |        Kafka (kafka-python)          |
 | **ML Training**         | GBM, scikit-learn, Torch, Ray Tune   |
 | **Experiment Tracking** | MLflow                               |
 | **Model Serving**       | ONNX Runtime                         |
