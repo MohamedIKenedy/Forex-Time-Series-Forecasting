@@ -153,8 +153,8 @@ Watch the system in action:
 Check the full video on YouTube:
 ![App Demo](images/forex_demo.gif)
 
-Clickable YouTube thumbnail (opens the video in a new tab)
-[![Watch the demo on YouTube](https://img.youtube.com/vi/j9E-c5DrYDQ/0.jpg)](https://youtu.be/j9E-c5DrYDQ)
+Watch the demo on YouTube:
+[![ https://youtu.be/j9E-c5DrYDQ]](https://youtu.be/j9E-c5DrYDQ)
 
 **What the demo covers:**
 - Starting the streaming pipeline and connecting to WebSocket
